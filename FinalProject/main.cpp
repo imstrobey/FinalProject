@@ -23,12 +23,15 @@
 #include <cstdlib>			    // for exit functionality
 #include <ctime>			    // for time() functionality
 #include <vector>
+#include <iostream>
 // include our class libraries
 #include <CSCI441/OpenGLUtils.hpp>
 #include <CSCI441/objects.hpp>  // for our 3D objects
 #include <CSCI441/SimpleShader.hpp>
 // include environment objects
 #include <CSCI441/ShaderProgram.hpp>
+#include <CSCI441/TextureUtils.hpp>     // convenience for loading textures
+
 //*************************************************************************************
 //
 // Global Parameters
@@ -133,6 +136,37 @@ struct LightingShaderAttributes {       // stores the locations of all of our sh
     GLint vPos;
 } lightingShaderAttributes;
 
+// Billboard shader program
+CSCI441::ShaderProgram *billboardShaderProgram = nullptr;
+struct BillboardShaderProgramUniforms {
+    GLint mvMatrix;                     // the ModelView Matrix to apply
+    GLint projMatrix;                   // the Projection Matrix to apply
+    GLint image;                        // the texture to bind
+} billboardShaderProgramUniforms;
+struct BillboardShaderProgramAttributes {
+    GLint vPos;                         // the vertex position
+} billboardShaderProgramAttributes;
+
+// point sprite information
+const GLuint NUM_SPRITES = 1000;          // the number of sprites to draw
+const GLfloat MAX_BOX_SIZE = 50;        // our sprites exist within a box of this size
+glm::vec3* spriteLocations = nullptr;   // the (x,y,z) location of each sprite
+GLushort* spriteIndices = nullptr;      // the order to draw the sprites in
+GLfloat* distances = nullptr;           // will be used to store the distance to the camera
+GLuint spriteTextureHandle;             // the texture to apply to the sprite
+GLfloat snowglobeAngle;                 // rotates all of our snowflakes
+const GLfloat NEW_BOX_SIZE = 35;
+glm::vec3 gravity = glm::vec3(0,-1.0f,0);
+
+// all drawing information
+const struct VAO_IDS {
+    GLuint PARTICLE_SYSTEM = 0;
+} VAOS;
+const GLuint NUM_VAOS = 1;
+GLuint vaos[NUM_VAOS];                  // an array of our VAO descriptors
+GLuint vbos[NUM_VAOS];                  // an array of our VBO descriptors
+GLuint ibos[NUM_VAOS];                  // an array of our IBO descriptors
+
 void renderScene(glm::mat4 view, glm::mat4 proj);
 
 bool mackHack = false;
@@ -144,6 +178,10 @@ bool mackHack = false;
 // Helper Functions
 
 GLdouble getRand() { return rand() / (GLdouble)RAND_MAX; }
+
+GLfloat randNumber( GLfloat max ) {
+    return rand() / (GLfloat)RAND_MAX * max * 2.0 - max;
+}
 
 // update arcball camera position based on phi, theta and radius
 void updateArcballCamera() {
@@ -218,6 +256,14 @@ void computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::ma
 
     glm::mat3 normMtx = glm::mat3(glm::transpose(glm::inverse(modelMtx)));
     glUniformMatrix3fv(lightingShaderUniforms.normalMatrix,1,GL_FALSE,&normMtx[0][0]);
+}
+
+void computeAndSendTransformationMatrices(glm::mat4 modelMatrix, glm::mat4 viewMatrix, glm::mat4 projectionMatrix,
+                                          GLint mvMtxLocation, GLint projMtxLocation) {
+    glm::mat4 mvMatrix = viewMatrix * modelMatrix;
+
+    glUniformMatrix4fv(mvMtxLocation, 1, GL_FALSE, &mvMatrix[0][0]);
+    glUniformMatrix4fv(projMtxLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
 }
 
 // Event Callbacks
@@ -1049,6 +1095,73 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     // TODO Christmas Tree
     drawChristmasTree(christmasTree, viewMtx, projMtx);
     drawChristmasTreeTrunk(christmasTrunk, viewMtx, projMtx);
+
+    glm::mat4 modelMatrix = glm::mat4( 1.0f );
+
+    // LOOKHERE #3
+
+    billboardShaderProgram->useProgram();
+
+//    modelMatrix = glm::rotate(glm::mat4(1.0f), snowglobeAngle, CSCI441::Y_AXIS);
+//    modelMatrix = glm::rotate(glm::mat4(1.0f), 2.0f, glm::vec3(1.0,2.0f,1.0));
+    modelMatrix = glm::translate(glm::mat4(1.0f), gravity);
+
+
+    computeAndSendTransformationMatrices( modelMatrix, viewMtx, projMtx,
+                                          billboardShaderProgramUniforms.mvMatrix, billboardShaderProgramUniforms.projMatrix);
+    glBindVertexArray( vaos[VAOS.PARTICLE_SYSTEM] );
+    glBindVertexArray( vaos[VAOS.PARTICLE_SYSTEM] );
+    glBindTexture(GL_TEXTURE_2D, spriteTextureHandle);
+
+    // TODO #1
+
+    for(int i = 0; i < NUM_SPRITES; i++){
+        glm::vec3 currentSprite = spriteLocations[ spriteIndices[i] ];
+//        cout << currentSprite.y << endl;
+
+        if(spriteLocations[ spriteIndices[i]].y <= 0){
+            spriteLocations[ spriteIndices[i]].y = randNumber(NEW_BOX_SIZE * 2);
+        }
+//        cout << spriteLocations[ spriteIndices[i] ].y << endl;
+        glm::vec4 p = modelMatrix * glm::vec4(currentSprite, 1.0f);
+        glm::vec4 eyePoints = p - glm::vec4(camPos, 1.0f);
+        float dist = dot(glm::vec4(arcballLookAtPoint - camPos,1), eyePoints);
+        distances[i] = dist;
+    }
+
+    // TODO #2
+    for(int i = 0; i < NUM_SPRITES - 1; i++){
+        for(int j = 1; j < NUM_SPRITES; j++){
+            if (distances[j - 1] > distances[j]){
+                float temporary = distances[j];
+                distances[j] = distances[j - 1];
+                distances[j - 1] = temporary;
+
+                int neat = spriteIndices[j];
+                spriteIndices[j] = spriteIndices[j - 1];
+                spriteIndices[j - 1] = neat;
+            }
+        }
+    }
+
+    glBindVertexArray( vaos[VAOS.PARTICLE_SYSTEM] );
+
+    glBindBuffer( GL_ARRAY_BUFFER, vbos[VAOS.PARTICLE_SYSTEM] );
+    glBufferData( GL_ARRAY_BUFFER, NUM_SPRITES * sizeof(glm::vec3), spriteLocations, GL_STATIC_DRAW );
+
+    glEnableVertexAttribArray( billboardShaderProgramAttributes.vPos );
+    glVertexAttribPointer( billboardShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0 );
+
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibos[VAOS.PARTICLE_SYSTEM] );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, NUM_SPRITES * sizeof(GLushort), spriteIndices, GL_STATIC_DRAW );
+
+    // TODO #3
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibos[VAOS.PARTICLE_SYSTEM] );
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(GLushort) * NUM_SPRITES, spriteIndices);
+
+    glDrawElements( GL_POINTS, NUM_SPRITES, GL_UNSIGNED_SHORT, (void*)0 );
+
+    lightingShader->useProgram();
 }
 
 // make jarrisons eyes move
@@ -1130,9 +1243,22 @@ void setupShaders() {
     lightingShaderUniforms.spotLightPosition = lightingShader->getUniformLocation("spotLightPosition");
     lightingShaderUniforms.spotLightDirection = lightingShader->getUniformLocation("spotLightDirection");
     lightingShaderUniforms.spotLightColor     = lightingShader->getUniformLocation("spotLightColor");
+
+    billboardShaderProgram = new CSCI441::ShaderProgram( "shaders/billboardQuadShader.v.glsl",
+                                                         "shaders/billboardQuadShader.g.glsl",
+                                                         "shaders/billboardQuadShader.f.glsl" );
+    billboardShaderProgramUniforms.mvMatrix = billboardShaderProgram->getUniformLocation( "mvMatrix");
+    billboardShaderProgramUniforms.projMatrix = billboardShaderProgram->getUniformLocation( "projMatrix");
+    billboardShaderProgramUniforms.image = billboardShaderProgram->getUniformLocation( "image");
+    billboardShaderProgramAttributes.vPos = billboardShaderProgram->getAttributeLocation( "vPos");
+
+    billboardShaderProgram->useProgram();
+    glUniform1i(billboardShaderProgramUniforms.image, 0);
 }
 
 void setupBuffers() {
+
+    /// ground
     struct VertexNormal {
         GLfloat x, y, z;
         GLfloat xNorm, yNorm, zNorm;
@@ -1146,6 +1272,46 @@ void setupBuffers() {
     };
 
     GLushort indices[4] = {0,1,2,3};
+
+    /// sprite
+    glGenVertexArrays( NUM_VAOS, vaos );
+    glGenBuffers( NUM_VAOS, vbos );
+    glGenBuffers( NUM_VAOS, ibos );
+
+    // --------------------------------------------------------------------------------------------------
+    // LOOKHERE #2 - generate sprites
+
+    spriteLocations = (glm::vec3*)malloc(sizeof(glm::vec3) * NUM_SPRITES);
+    spriteIndices = (GLushort*)malloc(sizeof(GLushort) * NUM_SPRITES);
+    distances = (GLfloat*)malloc(sizeof(GLfloat) * NUM_SPRITES);
+    for( int i = 0; i < NUM_SPRITES; i++ ) {
+        glm::vec3 pos( randNumber(MAX_BOX_SIZE), randNumber(NEW_BOX_SIZE), randNumber(MAX_BOX_SIZE) );
+        spriteLocations[i] = pos;
+        spriteIndices[i] = i;
+
+//        if(spriteLocations[i].y <= 0){
+//            spriteLocations[i].y = randNumber(NEW_BOX_SIZE);
+//        }
+//        cout << spriteLocations[i].y << endl;
+
+        //not quite working right
+
+//        cout << pos.y << endl;
+    }
+
+    glBindVertexArray( vaos[VAOS.PARTICLE_SYSTEM] );
+
+    glBindBuffer( GL_ARRAY_BUFFER, vbos[VAOS.PARTICLE_SYSTEM] );
+    glBufferData( GL_ARRAY_BUFFER, NUM_SPRITES * sizeof(glm::vec3), spriteLocations, GL_STATIC_DRAW );
+
+    glEnableVertexAttribArray( billboardShaderProgramAttributes.vPos );
+    glVertexAttribPointer( billboardShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0 );
+
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibos[VAOS.PARTICLE_SYSTEM] );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, NUM_SPRITES * sizeof(GLushort), spriteIndices, GL_STATIC_DRAW );
+
+    fprintf( stdout, "[INFO]: point sprites read in with VAO/VBO/IBO %d/%d/%d\n", vaos[VAOS.PARTICLE_SYSTEM], vbos[VAOS.PARTICLE_SYSTEM], ibos[VAOS.PARTICLE_SYSTEM] );
+    /// end sprite
 
     glGenVertexArrays(1, &groundVAO);
     glBindVertexArray(groundVAO);
@@ -1241,6 +1407,20 @@ void setupScene() {
     glUniform3fv(lightingShaderUniforms.spotLightColor, 1, &spotLightColor[0]);
 }
 
+void updateScene() {
+    /*snowglobeAngle += 0.01f;
+    if(snowglobeAngle >= 6.28f) {
+        snowglobeAngle -= 6.28f;
+    }*/
+    float yChange = -0.05;
+    gravity.y += yChange;
+}
+
+void setupTextures() {
+    // LOOKHERE #4
+    spriteTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/snowflake.png");
+}
+
 ///*************************************************************************************
 // Our main function
 
@@ -1252,6 +1432,7 @@ int main() {
 
     setupShaders();                                         // load our shader program into memory
     setupBuffers();
+    setupTextures();
     setupScene();
 
     // TODO #5 connect the CSCI441 objects library to our shader attribute inputs
@@ -1311,6 +1492,7 @@ int main() {
         }
 
         renderScene(viewMtx,projMtx);					                // draw everything to the window
+        updateScene();
 
         // draw another viewport if first person camera is active
         if (fpCamActive) {
@@ -1322,6 +1504,7 @@ int main() {
                                   glm::vec3(  0,  1,  0 ) );
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             renderScene(viewMtx, projMtx);
+            updateScene();
             glDisable(GL_SCISSOR_TEST);
         }
 
