@@ -38,6 +38,7 @@
 
 const GLint WINDOW_WIDTH = 640, WINDOW_HEIGHT = 480;    //window width and height
 const int MAX_POS = 50;
+const GLfloat quadSize = 80.0f;
 
 int leftMouseButton;    	 				// status of the mouse button
 double mouseX = -99999, mouseY = -99999;    // last known X and Y of the mouse
@@ -92,9 +93,10 @@ GLuint groundVAO;                       // the VAO descriptor for our ground pla
 
 // TODO evil santa
 /// global santa variabls
-float santaX = 10.0f, santaY = 0.0f, santaZ = 5.0f;
+float santaX = 60.0f, santaY = 0.0f, santaZ = 60.0f; //10.0f, 8.0f, 10.0f
 float santaRotation = 0.0f;
-bool santaMoving = false;
+bool santaMoveRight = true;
+
 
 /// Global Blossom variables
 float blossomX = 5.0f,  blossomY = 1.5f, blossomZ = 5.0f;   // blossom position
@@ -147,8 +149,20 @@ struct BillboardShaderProgramAttributes {
     GLint vPos;                         // the vertex position
 } billboardShaderProgramAttributes;
 
+/// keeps track of sprite shader program
+CSCI441::ShaderProgram *texShaderProgram = nullptr;
+struct TexShaderProgramUniforms {
+    GLint mvpMatrix;                    // the MVP Matrix to apply
+    GLint textureMap;
+} texShaderProgramUniforms;
+struct TexShaderProgramAttributes {
+    GLint vPos;                         // position of our vertex
+    GLint vTexCoord;
+} texShaderProgramAttributes;
+
+
 // point sprite information
-const GLuint NUM_SPRITES = 1000;          // the number of sprites to draw
+const GLuint NUM_SPRITES = 1;          // the number of sprites to draw /// TODO redraw sprites
 const GLfloat MAX_BOX_SIZE = 50;        // our sprites exist within a box of this size
 glm::vec3* spriteLocations = nullptr;   // the (x,y,z) location of each sprite
 GLushort* spriteIndices = nullptr;      // the order to draw the sprites in
@@ -166,6 +180,23 @@ const GLuint NUM_VAOS = 1;
 GLuint vaos[NUM_VAOS];                  // an array of our VAO descriptors
 GLuint vbos[NUM_VAOS];                  // an array of our VBO descriptors
 GLuint ibos[NUM_VAOS];                  // an array of our IBO descriptors
+
+/// create texture handles for each side of the skybox
+GLuint rightTextureHandle;
+GLuint leftTextureHandle;
+GLuint topTextureHandle;
+//GLuint bottomTextureHandle;
+GLuint frontTextureHandle;
+GLuint backTextureHandle;
+
+/// create VAOs and VBOs for each side of the skybox
+GLuint rightVAO,rightVBO[2];
+GLuint leftVAO,leftVBO[2];
+GLuint topVAO,topVBO[2];
+GLuint bottomVAO,bottomVBO[2];
+GLuint frontVAO,frontVBO[2];
+GLuint backVAO,backVBO[2];
+
 
 void renderScene(glm::mat4 view, glm::mat4 proj);
 
@@ -258,12 +289,22 @@ void computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::ma
     glUniformMatrix3fv(lightingShaderUniforms.normalMatrix,1,GL_FALSE,&normMtx[0][0]);
 }
 
-void computeAndSendTransformationMatrices(glm::mat4 modelMatrix, glm::mat4 viewMatrix, glm::mat4 projectionMatrix,
+void computeAndSendTransformationMatrices5(glm::mat4 modelMatrix, glm::mat4 viewMatrix, glm::mat4 projectionMatrix,
                                           GLint mvMtxLocation, GLint projMtxLocation) {
     glm::mat4 mvMatrix = viewMatrix * modelMatrix;
 
     glUniformMatrix4fv(mvMtxLocation, 1, GL_FALSE, &mvMatrix[0][0]);
     glUniformMatrix4fv(projMtxLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
+}
+
+void computeAndSendTransformationMatrices6(glm::mat4 modelMatrix, glm::mat4 viewMatrix, glm::mat4 projectionMatrix,
+                                          GLint mvpMtxLocation, GLint modelMtxLocation = -1, GLint normalMtxLocation = -1) {
+    glm::mat4 mvpMatrix = projectionMatrix * viewMatrix * modelMatrix;
+    glm::mat3 normalMatrix = glm::mat3( glm::transpose( glm::inverse(modelMatrix) ) );
+
+    glUniformMatrix4fv(mvpMtxLocation, 1, GL_FALSE, &mvpMatrix[0][0]);
+    glUniformMatrix4fv(modelMtxLocation, 1, GL_FALSE, &modelMatrix[0][0]);
+    glUniformMatrix3fv(normalMtxLocation, 1, GL_FALSE, &normalMatrix[0][0]);
 }
 
 // Event Callbacks
@@ -491,7 +532,7 @@ void drawChristmasTree(ChristmasTree tree, glm::mat4 viewMtx, glm::mat4 projMtx)
     glUniform3fv(lightingShaderUniforms.materialColor, 1, &tree.color[0]);
     CSCI441::drawSolidCone(20.0f, 20.0f, 10, 10);
 
-    glm::mat4 transMtx = glm::translate(glm::mat4(1.0f), glm::vec3(25.0f, 18.0f, 25.0f));
+    glm::mat4 transMtx = glm::translate(glm::mat4(1.0f), glm::vec3(-35.0f, 18.0f, -25.0f));
     computeAndSendMatrixUniforms(transMtx, viewMtx, projMtx);
     CSCI441::drawSolidCone(14.0f, 14.0f, 10, 10);
 
@@ -541,7 +582,7 @@ void generateEnvironment() {
     const GLfloat TOP_END_POINT = GRID_LENGTH / 2.0f + 5;
 
     // TODO Christmas Tree
-    glm::mat4 transMtx = glm::translate(glm::mat4(1.0f), glm::vec3(25.0f, 5.0f, 25.0f));
+    glm::mat4 transMtx = glm::translate(glm::mat4(1.0f), glm::vec3(-35.0f, 5.0f, -25.0f));
     christmasTree.modelMatrix = transMtx;
     christmasTree.color = glm::vec3(0.0f,1.0f,0.0f);
 
@@ -1049,20 +1090,77 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     //// BEGIN DRAWING THE GROUND PLANE ////
     // draw the ground plane
+/*
     glm::mat4 groundModelMtx = glm::scale( glm::mat4(1.0f), glm::vec3(55.0f, 1.0f, 55.0f));
+*/
+    glm::mat4 groundModelMtx = glm::scale( glm::mat4(1.0f), glm::vec3(80.0f,1.0f,80.0f));
     computeAndSendMatrixUniforms(groundModelMtx, viewMtx, projMtx);
 
-    glm::vec3 groundColor(0.3f, 0.8f, 0.2f);
+    glm::vec3 groundColor(1.0f,1.0f,1.0f);
     glUniform3fv(lightingShaderUniforms.materialColor, 1, &groundColor[0]);
 
     glBindVertexArray(groundVAO);
     glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0);
     //// END DRAWING THE GROUND PLANE ////
 
+    /************************************** sky box drawing (each plane) **********************************************/
+
+    /////////////////////////////////////////////////////// left //////////////////////////////////////////////////////////////
+    texShaderProgram->useProgram();
+
+    computeAndSendTransformationMatrices6(glm::mat4(1.0f), viewMtx, projMtx, texShaderProgramUniforms.mvpMatrix);
+    glBindTexture(GL_TEXTURE_2D,leftTextureHandle);
+
+    glBindVertexArray( leftVAO );
+    glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    //////////////////////////////////////////////////// right /////////////////////////////////////////////////////////////////
+    computeAndSendTransformationMatrices6(glm::mat4(1.0f), viewMtx, projMtx, texShaderProgramUniforms.mvpMatrix);
+    glBindTexture(GL_TEXTURE_2D,rightTextureHandle);
+
+    glBindVertexArray( rightVAO );
+    glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////// back //////////////////////////////////////////////////////////////
+    computeAndSendTransformationMatrices6(glm::mat4(1.0f), viewMtx, projMtx, texShaderProgramUniforms.mvpMatrix);
+    glBindTexture(GL_TEXTURE_2D,backTextureHandle);
+
+    glBindVertexArray( backVAO );
+    glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////// front //////////////////////////////////////////////////////////////
+    computeAndSendTransformationMatrices6(glm::mat4(1.0f), viewMtx, projMtx, texShaderProgramUniforms.mvpMatrix);
+    glBindTexture(GL_TEXTURE_2D,frontTextureHandle);
+
+    glBindVertexArray( frontVAO );
+    glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////// top //////////////////////////////////////////////////////////////
+    computeAndSendTransformationMatrices6(glm::mat4(1.0f), viewMtx, projMtx, texShaderProgramUniforms.mvpMatrix);
+    glBindTexture(GL_TEXTURE_2D,topTextureHandle);
+
+    glBindVertexArray( topVAO );
+    glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////// bottom //////////////////////////////////////////////////////////////
+    /*computeAndSendTransformationMatrices6(glm::mat4(1.0f), viewMtx, projMtx, texShaderProgramUniforms.mvpMatrix);
+    glBindTexture(GL_TEXTURE_2D,bottomTextureHandle);
+
+    glBindVertexArray( bottomVAO );
+    glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );*/
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    lightingShader->useProgram();
+
     // TODO Evil Santa
     /// render scene
     glm::mat4 santaModelMtx(1.0f);
-    santaModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,0.0f,0.0f));
+    santaModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(santaX,0.0f,santaZ));
     drawEvilSanta(santaModelMtx, viewMtx, projMtx);
 
     /// draw jarrison
@@ -1107,7 +1205,7 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     modelMatrix = glm::translate(glm::mat4(1.0f), gravity);
 
 
-    computeAndSendTransformationMatrices( modelMatrix, viewMtx, projMtx,
+    computeAndSendTransformationMatrices5( modelMatrix, viewMtx, projMtx,
                                           billboardShaderProgramUniforms.mvMatrix, billboardShaderProgramUniforms.projMatrix);
     glBindVertexArray( vaos[VAOS.PARTICLE_SYSTEM] );
     glBindVertexArray( vaos[VAOS.PARTICLE_SYSTEM] );
@@ -1177,6 +1275,27 @@ void updateJarrisonAnimation() {
             eyesMovingInward = true;
         } else {
             currentEyeOffset -= 0.03;
+        }
+    }
+}
+
+void updateSantaDirection(){
+    if(santaMoveRight){
+        if (santaX < 65){
+            santaX += 0.75;
+        }
+        else {
+            santaMoveRight = false;
+            santaX -= 0.75;
+        }
+    }
+    else {
+        if (santaX > -65){
+            santaX -= 0.75;
+        }
+        else {
+            santaMoveRight = true;
+            santaX += 0.75;
         }
     }
 }
@@ -1254,6 +1373,13 @@ void setupShaders() {
 
     billboardShaderProgram->useProgram();
     glUniform1i(billboardShaderProgramUniforms.image, 0);
+
+    texShaderProgram = new CSCI441::ShaderProgram("shaders/texShader.v.glsl","shaders/texShader.f.glsl");
+    texShaderProgramUniforms.mvpMatrix = texShaderProgram->getUniformLocation("mvpMatrix");
+    texShaderProgramUniforms.textureMap = texShaderProgram->getUniformLocation("textureMap");
+    texShaderProgramAttributes.vPos = texShaderProgram->getAttributeLocation("vPos");
+    texShaderProgramAttributes.vTexCoord = texShaderProgram->getAttributeLocation("vTexCoord");
+    glUniform1i(texShaderProgramUniforms.textureMap,0);
 }
 
 void setupBuffers() {
@@ -1329,6 +1455,186 @@ void setupBuffers() {
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbods[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    ////////////////////////////////////////////////// left plane /////////////////////////////////////////////////////
+
+    struct VertexTextured { /// struct for drawing each plane of our skybox
+        float x,y,z;
+        float s,t;
+    };
+
+    VertexTextured leftTexVertices[4] = {
+            {quadSize, 0.0f,-quadSize,0.0f,0.0f},
+            {quadSize,0.0f ,quadSize,1.0f,0.0f},
+            {quadSize,quadSize,-quadSize,0.0f,1.0f},
+            {quadSize,quadSize,quadSize,1.0f,1.0f}
+    };
+    unsigned short leftTexIndices[4] = {0,1,2,3};
+
+    glGenVertexArrays(1,&leftVAO);
+    glBindVertexArray(leftVAO);
+
+    glGenBuffers(2, leftVBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, leftVBO[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(leftTexVertices), leftTexVertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, leftVBO[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(leftTexIndices), leftTexIndices, GL_STATIC_DRAW);
+
+    fprintf(stdout, "[INFO]: platform read in with VAO %d\n", leftVAO);
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////// right plane /////////////////////////////////////////////////////
+    VertexTextured rightTexVertices[4] = {
+            {-quadSize, 0.0f,quadSize,0.0f,0.0f},
+            {-quadSize,0.0f ,-quadSize,1.0f,0.0f},
+            {-quadSize,quadSize,quadSize,0.0f,1.0f},
+            {-quadSize,quadSize,-quadSize,1.0f,1.0f}
+    };
+    unsigned short rightTexIndices[4] = {0,1,2,3};
+
+    glGenVertexArrays(1,&rightVAO);
+    glBindVertexArray(rightVAO);
+
+    glGenBuffers(2, rightVBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, rightVBO[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(rightTexVertices), rightTexVertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rightVBO[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rightTexIndices), rightTexIndices, GL_STATIC_DRAW);
+
+    fprintf(stdout, "[INFO]: platform read in with VAO %d\n", rightVAO);
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////// back plane /////////////////////////////////////////////////////
+    VertexTextured backTexVertices[4] = {
+            {-quadSize,0.0f ,-quadSize,0.0f,0.0f},
+            {quadSize, 0.0f,-quadSize,1.0f,0.0f},
+            {-quadSize,quadSize,-quadSize,0.0f,1.0f},
+            {quadSize,quadSize,-quadSize,1.0f,1.0f}
+    };
+    unsigned short backTexIndices[4] = {0,1,2,3};
+
+    glGenVertexArrays(1,&backVAO);
+    glBindVertexArray(backVAO);
+
+    glGenBuffers(2, backVBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, backVBO[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(backTexVertices), backTexVertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, backVBO[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(backTexIndices), backTexIndices, GL_STATIC_DRAW);
+
+    fprintf(stdout, "[INFO]: platform read in with VAO %d\n", backVAO);
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////// front plane /////////////////////////////////////////////////////
+    VertexTextured frontTexVertices[4] = {
+            {quadSize,0.0f ,quadSize,0.0f,0.0f},
+            {-quadSize, 0.0f,quadSize,1.0f,0.0f},
+            {quadSize,quadSize,quadSize,0.0f,1.0f},
+            {-quadSize,quadSize,quadSize,1.0f,1.0f}
+    };
+    unsigned short frontTexIndices[4] = {0,1,2,3};
+
+    glGenVertexArrays(1,&frontVAO);
+    glBindVertexArray(frontVAO);
+
+    glGenBuffers(2, frontVBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, frontVBO[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(frontTexVertices), frontTexVertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, frontVBO[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(frontTexIndices), frontTexIndices, GL_STATIC_DRAW);
+
+    fprintf(stdout, "[INFO]: platform read in with VAO %d\n", frontVAO);
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////// top plane /////////////////////////////////////////////////////
+    VertexTextured topTexVertices[4] = {
+            {quadSize,quadSize,-quadSize,0.0f,1.0f},
+            {-quadSize,quadSize,-quadSize,1.0f,1.0f},
+            {quadSize,quadSize,quadSize,0.0f,0.0f},
+            {-quadSize,quadSize,quadSize,1.0f,0.0f}
+    };
+    unsigned short topTexIndices[4] = {0,1,2,3};
+
+    glGenVertexArrays(1,&topVAO);
+    glBindVertexArray(topVAO);
+
+    glGenBuffers(2, topVBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, topVBO[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(topTexVertices), topTexVertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, topVBO[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(topTexIndices), topTexIndices, GL_STATIC_DRAW);
+
+    fprintf(stdout, "[INFO]: platform read in with VAO %d\n", topVAO);
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////// bottom plane /////////////////////////////////////////////////////
+    /*VertexTextured bottomTexVertices[4] = {
+            {55.0f,0.0f,-55.0f,0.0f,1.0f},
+            {-55.0f,0.0f,-55.0f,1.0f,1.0f},
+            {55.0f,0.0f,55.0f,0.0f,0.0f},
+            {-55.0f,0.0f,55.0f,1.0f,0.0f}
+    };
+    unsigned short bottomTexIndices[4] = {0,1,2,3};
+
+    glGenVertexArrays(1,&bottomVAO);
+    glBindVertexArray(bottomVAO);
+
+    glGenBuffers(2, bottomVBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, bottomVBO[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(bottomTexVertices), bottomTexVertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+
+    glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bottomVBO[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(bottomTexIndices), bottomTexIndices, GL_STATIC_DRAW);
+
+    fprintf(stdout, "[INFO]: platform read in with VAO %d\n", bottomVAO);*/
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
 void setupOpenGL() {
@@ -1384,7 +1690,7 @@ void setupScene() {
     // TODO #4 set the light direction and color
     glm::vec3 lightDirection = glm::vec3(-1, -1, -1);
     glm::vec3 lightColor = glm::vec3(1, 1, 1);
-    glm::vec3 pointLightColor = glm::vec3(1, 0, 0);
+    glm::vec3 pointLightColor = glm::vec3(1, 1,1);
     // for point light
     glm::vec3 lightPosition = glm::vec3(1, 1, 0);
     glUniform3fv(lightingShaderUniforms.lightPosition, 1, &lightPosition[0]);
@@ -1419,6 +1725,13 @@ void updateScene() {
 void setupTextures() {
     // LOOKHERE #4
     spriteTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/snowflake.png");
+
+    /// loading in the files for each plane's texture
+    rightTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/posx.jpg");
+    leftTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/negx.jpg");
+    topTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/posy.jpg");
+    frontTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/posz.jpg");
+    backTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/negz.jpg");
 }
 
 ///*************************************************************************************
@@ -1513,6 +1826,7 @@ int main() {
 
         // jarrison constant animation
         updateJarrisonAnimation();
+        updateSantaDirection();
 
         // the following code is a hack for OSX Mojave
         // the window is initially black until it is moved
