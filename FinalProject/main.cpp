@@ -72,6 +72,14 @@ struct Bushes {                     // keeps track of an individual bush's attri
 };
 std::vector<Bushes> bushes;         // list of bushes
 
+// TODO candy canes
+struct CandyCanes {                     // keeps track of an individual bush's attributes
+    glm::mat4 modelMatrix;          // position and size of bush
+    glm::vec3 color;                // bush color
+};
+std::vector<CandyCanes> candyCanes;         // list of bushes
+
+
 // TODO Christmas Tree
 struct ChristmasTree {
     glm::mat4 modelMatrix;
@@ -562,6 +570,48 @@ void drawChristmasTreeTrunk(ChristmasTreeTrunk trunk, glm::mat4 viewMtx, glm::ma
     CSCI441::drawSolidTopHemisphere(2.0f,10.0f,10.0f);
 }*/
 
+void drawCandyCane(CandyCanes cane, glm::mat4 viewMtx, glm::mat4 projMtx){
+    computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
+    glm::vec3 candyColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
+    glm::mat4 transMtx = cane.modelMatrix;
+
+    glm::vec3 candyColorRed = glm::vec3{1.0,0.0,0.0};
+    glm::vec3 candyColorWhite = glm::vec3{1.0,1.0,1.0};
+    float base = 2.0f,top = 1.8f;
+
+    for(int i = 0; i < 8; i++){
+        if(i%2){
+            candyColor = candyColorRed;
+            base -= 0.2;
+            top -= 0.2;
+            glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
+            CSCI441::drawSolidCylinder(base,top,3.0f,10,10);
+            transMtx = glm::translate(transMtx,glm::vec3(0.0f,3.0f,0.0f));
+            cane.modelMatrix = transMtx;
+            computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
+        }
+        else{
+            candyColor = candyColorWhite;
+            base -= 0.2;
+            top -= 0.2;
+            glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
+            CSCI441::drawSolidCylinder(base,top,3.0f,10,10);
+            transMtx = glm::translate(transMtx,glm::vec3(0.0f,3.0f,0.0f));
+            cane.modelMatrix = transMtx;
+            computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
+        }
+    }
+
+    candyColor = candyColorWhite;
+    glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
+    CSCI441::drawSolidCone(0.2f,3.0f,10,10);
+    transMtx = glm::translate(transMtx,glm::vec3(0.0f,3.0f,0.0f));
+    cane.modelMatrix = transMtx;
+    computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
+}
+
+
 // generateEnvironment() ///////////////////////////////////////////////////////
 //
 //  This function creates our world which will consist of a grid in the XZ-Plane
@@ -590,27 +640,21 @@ void generateEnvironment() {
     christmasTrunk.modelMatrix = transMtx;
     christmasTrunk.color = glm::vec3(0.4f, 0.2f, 0.2f);
 
+
     // generate random trees and bushes to put around the scene
     for (int i = LEFT_END_POINT; i < RIGHT_END_POINT; i += GRID_SPACING_WIDTH) { // go left to right
         for (int j = BOTTOM_END_POINT; j < TOP_END_POINT; j += GRID_SPACING_LENGTH) { // go bottom to top
-            if (i % 3 == 0 && j % 3 == 0 && getRand() < 0.03) { // if the point is even and random_variable < 0.4
-                Trees tree;
+            if (i % 3 == 0 && j % 3 == 0 && getRand() < 0.01) { // if the point is even and random_variable < 0.4
+                // TODO Christmas Canes
+                CandyCanes cane;
                 glm::mat4 transMtx = glm::translate(glm::mat4(1.0f), glm::vec3(i, 0.0f, j));
-                tree.modelMatrix = transMtx;
-                tree.color = glm::vec3(getRand(), getRand(), getRand());
-                tree.modelMatrix = transMtx;
-                trees.push_back(tree);
-            }
-            else if(i % 5 == 0 && j % 5 == 0 && getRand() < 0.02){
-                Bushes bush;
-                glm::mat4 transMtx = glm::translate(glm::mat4(1.0), glm::vec3(i,0.0f,j));
-                bush.modelMatrix = transMtx;
-                bush.color = glm::vec3(getRand(),getRand(),getRand());
-                bushes.push_back(bush);
+                cane.modelMatrix = transMtx;
+                candyCanes.push_back(cane);
             }
         }
     }
 }
+
 // TODO Evil Santa
 /// drawing santa hierarchically
 void drawSantaBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
@@ -1193,6 +1237,11 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     // TODO Christmas Tree
     drawChristmasTree(christmasTree, viewMtx, projMtx);
     drawChristmasTreeTrunk(christmasTrunk, viewMtx, projMtx);
+
+    // TODO candy canes
+    for(CandyCanes c: candyCanes){
+        drawCandyCane(c , viewMtx, projMtx);
+    }
 
     glm::mat4 modelMatrix = glm::mat4( 1.0f );
 
