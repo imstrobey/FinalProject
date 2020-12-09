@@ -170,8 +170,8 @@ struct TexShaderProgramAttributes {
 
 
 // point sprite information
-const GLuint NUM_SPRITES = 1;          // the number of sprites to draw /// TODO redraw sprites
-const GLfloat MAX_BOX_SIZE = 50;        // our sprites exist within a box of this size
+const GLuint NUM_SPRITES = 300;          // the number of sprites to draw /// TODO redraw sprites
+const GLfloat MAX_BOX_SIZE = 80;        // our sprites exist within a box of this size
 glm::vec3* spriteLocations = nullptr;   // the (x,y,z) location of each sprite
 GLushort* spriteIndices = nullptr;      // the order to draw the sprites in
 GLfloat* distances = nullptr;           // will be used to store the distance to the camera
@@ -1251,8 +1251,7 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
 
 //    modelMatrix = glm::rotate(glm::mat4(1.0f), snowglobeAngle, CSCI441::Y_AXIS);
 //    modelMatrix = glm::rotate(glm::mat4(1.0f), 2.0f, glm::vec3(1.0,2.0f,1.0));
-    modelMatrix = glm::translate(glm::mat4(1.0f), gravity);
-
+    // modelMatrix = glm::translate(glm::mat4(1.0f), gravity);
 
     computeAndSendTransformationMatrices5( modelMatrix, viewMtx, projMtx,
                                           billboardShaderProgramUniforms.mvMatrix, billboardShaderProgramUniforms.projMatrix);
@@ -1262,12 +1261,16 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     // TODO #1
 
+
     for(int i = 0; i < NUM_SPRITES; i++){
         glm::vec3 currentSprite = spriteLocations[ spriteIndices[i] ];
 //        cout << currentSprite.y << endl;
 
         if(spriteLocations[ spriteIndices[i]].y <= 0){
-            spriteLocations[ spriteIndices[i]].y = randNumber(NEW_BOX_SIZE * 2);
+            spriteLocations[ spriteIndices[i]].y += MAX_BOX_SIZE;
+        }
+        else {
+            spriteLocations[ spriteIndices[i]].y -= 0.05;
         }
 //        cout << spriteLocations[ spriteIndices[i] ].y << endl;
         glm::vec4 p = modelMatrix * glm::vec4(currentSprite, 1.0f);
@@ -1699,6 +1702,9 @@ void setupOpenGL() {
 
     glEnable( GL_DEPTH_TEST );
 
+    glEnable(GL_BLEND);									                        // enable blending
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	                        // use one minus blending equation
+
     glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );	// set the clear color to black
 }
 
@@ -1767,8 +1773,8 @@ void updateScene() {
     if(snowglobeAngle >= 6.28f) {
         snowglobeAngle -= 6.28f;
     }*/
-    float yChange = -0.05;
-    gravity.y += yChange;
+//    float yChange = -0.05;
+//    gravity.y += yChange;
 }
 
 void setupTextures() {

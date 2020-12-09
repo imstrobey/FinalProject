@@ -8,84 +8,82 @@
 		<Option virtualFolders="CMake Files\;"/>
 		<Build>
 			<Target title="all">
-				<Option working_dir="C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug"/>
+				<Option working_dir="D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
-					<CompileFile command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="MIDTERM">
-				<Option output="C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/MIDTERM.exe" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug"/>
+				<Option output="D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/MIDTERM.exe" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../include/c++/10.2.0"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../include/c++/10.2.0/x86_64-w64-mingw32"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../include/c++/10.2.0/backward"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/include"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../include"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/include-fixed"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../x86_64-w64-mingw32/include"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include/c++"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include/c++/i686-w64-mingw32"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include/c++/backward"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include-fixed"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/../../../../i686-w64-mingw32/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 MIDTERM"/>
-					<CompileFile command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 MIDTERM"/>
+					<CompileFile command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="MIDTERM/fast">
-				<Option output="C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/MIDTERM.exe" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug"/>
+				<Option output="D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/MIDTERM.exe" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../include/c++/10.2.0"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../include/c++/10.2.0/x86_64-w64-mingw32"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../include/c++/10.2.0/backward"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/include"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../include"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/include-fixed"/>
-					<Add directory="c:\mingw64\bin\../lib/gcc/x86_64-w64-mingw32/10.2.0/../../../../x86_64-w64-mingw32/include"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include/c++"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include/c++/i686-w64-mingw32"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include/c++/backward"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include-fixed"/>
+					<Add directory="C:/MinGW64/mingw32/bin/../lib/gcc/i686-w64-mingw32/8.1.0/../../../../i686-w64-mingw32/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 MIDTERM/fast"/>
-					<CompileFile command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 MIDTERM/fast"/>
+					<CompileFile command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="edit_cache">
-				<Option working_dir="C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug"/>
+				<Option working_dir="D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
-					<CompileFile command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="rebuild_cache">
-				<Option working_dir="C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug"/>
+				<Option working_dir="D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
-					<CompileFile command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/mingw64/bin/mingw32-make.exe -f &quot;C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/MinGW64/mingw32/bin/mingw32-make.exe -f &quot;D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/main.cpp">
+		<Unit filename="D:/CSCI 441/FinalProject/FinalProject/main.cpp">
 			<Option target="MIDTERM"/>
 		</Unit>
-		<Unit filename="C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/CMakeLists.txt">
+		<Unit filename="D:/CSCI 441/FinalProject/FinalProject/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>
 	</Project>
