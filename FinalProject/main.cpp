@@ -682,6 +682,60 @@ void drawSantaLeftHand(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx)
     CSCI441::drawSolidSphere(0.8f,10,10);
 }
 
+void drawSantaBazookaBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 12.0f, 2.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
+    modelMtx = glm::rotate(modelMtx, glm::radians(90.0f), glm::vec3(10.0f,1.0f,1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaHeadColor(glm::vec3{0.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaHeadColor[0]);
+    CSCI441::drawSolidCylinder(0.2f, 0.2f, 2.5, 10, 10);
+}
+
+void drawSantaBazookaFrontEnd(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 12.0f, 2.4f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 2.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.0,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+
+void drawSantaBazookaBackEnd(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 12.0f, 15.2f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 2.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.0,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+void drawSantaBazookaHandle(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 10.0f, 11.5f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 5.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{0.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawSantaBazookaScopeBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 13.0f, 5.5f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 5.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{0.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawSantaBazookaScopeVisor(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 15.0f, 5.5f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(6.0f, 6.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
 void drawSantaRightArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     modelMtx = glm::translate(modelMtx, glm::vec3(14.0f, 9.0f, 10.0f));
     modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
@@ -819,6 +873,12 @@ void drawEvilSanta(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     drawSantaLeftHand(modelMtx,viewMtx,projMtx);
     drawSantaRightArm(modelMtx,viewMtx,projMtx);
     drawSantaRightHand(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaBody(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaFrontEnd(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaBackEnd(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaHandle(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaScopeBody(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaScopeVisor(modelMtx,viewMtx,projMtx);
 }
 
 /// Blossom drawing functions
@@ -1140,15 +1200,6 @@ void drawVoltorbBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     computeAndSendMatrixUniforms(topHemisphereModelMtx, viewMtx, projMtx);
 
-    /*glm::vec3 bodyColor( glm::vec3{1.0f, 0.0f, 0.0f});
-    glUniform3fv(lightingShaderUniforms.materialColor, 1, &bodyColor[0]);
-
-    CSCI441::drawSolidTopHemisphere(2.0f, 20, 20); //use a custom shape to draw the top of the sphere
-
-    glm::vec3 bodyColor2( glm::vec3{1.0f,1.0f,1.0f});
-    glUniform3fv(lightingShaderUniforms.materialColor, 1, &bodyColor2[0]);
-
-    CSCI441::drawSolidBottomHemisphere(2.0f, 20, 20);*///use a custom shape to draw the bottom of the sphere
 }
 void drawVoltorb(glm::mat4 modelMtx,glm::mat4 viewMtx,glm::mat4 projectMtx){
     // voltorb body
@@ -1169,6 +1220,50 @@ void drawTreeTopper(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
     glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
     CSCI441::drawSolidSphere(5.0f, 10, 10);
+}
+
+void drawRedOrnamentTop(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(0.3f, 9.8f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 1.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{0.5,0.5,0.5});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawRedOrnamentSphere(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(0.3f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 1.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+void drawRedOrnament(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    drawRedOrnamentTop(modelMtx,viewMtx,projMtx);
+    drawRedOrnamentSphere(modelMtx,viewMtx,projMtx);
+}
+
+void drawGreenOrnamentTop(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(0.3f, 9.8f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 1.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{1.5,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawGreenOrnamentSphere(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(0.3f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 1.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.0,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+void drawGreenOrnament(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    drawGreenOrnamentTop(modelMtx,viewMtx,projMtx);
+    drawGreenOrnamentSphere(modelMtx,viewMtx,projMtx);
 }
 
 void transposeFlake(glm::vec3 landingPosition, glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -1257,6 +1352,13 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     santaModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(santaX,0.0f,santaZ));
     drawEvilSanta(santaModelMtx, viewMtx, projMtx);
 
+    glm::mat4 redOrnamentModelMtx(1.0f);
+    glm::mat4 greenOrnamentModelMtx(1.0f);
+    drawRedOrnament(redOrnamentModelMtx, viewMtx, projMtx);
+
+    greenOrnamentModelMtx = glm::translate(greenOrnamentModelMtx, glm::vec3(0.3f, 13.0f, 10.0f));
+    drawGreenOrnament(greenOrnamentModelMtx, viewMtx, projMtx);
+
     /// draw jarrison
     glm::mat4 jarrisonModelMtx(1.0f);
     jarrisonModelMtx = glm::translate( glm::mat4(1.0), glm::vec3( jarrisonX, 0.0f, jarrisonZ ) );
@@ -1292,6 +1394,7 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     for(CandyCanes c: candyCanes){
         drawCandyCane(c , viewMtx, projMtx);
     }
+
 
     glm::mat4 modelMatrix = glm::mat4( 1.0f );
 
@@ -1359,6 +1462,7 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     treeTopperShaderProgram->useProgram();
     drawTreeTopper(modelMatrix, viewMtx, projMtx);
 
+
     lightingShader->useProgram();
 }
 
@@ -1378,7 +1482,7 @@ void updateJarrisonAnimation() {
         }
     }
 }
-
+/*
 void updateSantaDirection(){
     if(santaMoveRight){
         if (santaX < 65){
@@ -1399,7 +1503,7 @@ void updateSantaDirection(){
         }
     }
 }
-
+*/
 //*************************************************************************************
 // Setup Functions
 
@@ -1958,7 +2062,7 @@ int main() {
         glfwPollEvents();				                // check for any events and signal to redraw screen
 
         updateJarrisonAnimation();
-        updateSantaDirection();
+        //updateSantaDirection();
 
         // the following code is a hack for OSX Mojave
         // the window is initially black until it is moved
