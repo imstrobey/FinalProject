@@ -1,9 +1,8 @@
 #version 410 core
 
-in vec3 topperFragColor;
-
 out vec4 fragColorOut;
+uniform vec3 topperColor;
 
 void main() {
-    fragColorOut = vec4(topperFragColor, 1.0);
+    fragColorOut = vec4(topperColor, 1.0);
 }

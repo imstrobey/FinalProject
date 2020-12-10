@@ -187,7 +187,6 @@ glm::vec3* spriteLocations = nullptr;   // the (x,y,z) location of each sprite
 GLushort* spriteIndices = nullptr;      // the order to draw the sprites in
 GLfloat* distances = nullptr;           // will be used to store the distance to the camera
 GLuint spriteTextureHandle;             // the texture to apply to the sprite
-GLfloat snowglobeAngle;                 // rotates all of our snowflakes
 const GLfloat NEW_BOX_SIZE = 35;
 glm::vec3 gravity = glm::vec3(0,-1.0f,0);
 
@@ -1166,10 +1165,10 @@ void drawVoltorb(glm::mat4 modelMtx,glm::mat4 viewMtx,glm::mat4 projectMtx){
 }
 
 void drawTreeTopper(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
-    modelMtx = glm::translate(modelMtx, glm::vec3(-35.0f, 54.0f, -25.0f));
+    modelMtx = glm::translate(modelMtx, glm::vec3(-35.0f, 45.0f, -25.0f));
     computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
     glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
-    CSCI441::drawSolidSphere(10.0f, 10, 10);
+    CSCI441::drawSolidSphere(5.0f, 10, 10);
 }
 
 void transposeFlake(glm::vec3 landingPosition, glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -1357,8 +1356,8 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     glDrawElements( GL_POINTS, NUM_SPRITES, GL_UNSIGNED_SHORT, (void*)0 );
 
-//    treeTopperShaderProgram->useProgram();
-//    drawTreeTopper(modelMatrix, viewMtx, projMtx);
+    treeTopperShaderProgram->useProgram();
+    drawTreeTopper(modelMatrix, viewMtx, projMtx);
 
     lightingShader->useProgram();
 }
@@ -1482,10 +1481,10 @@ void setupShaders() {
     texShaderProgramAttributes.vTexCoord = texShaderProgram->getAttributeLocation("vTexCoord");
     glUniform1i(texShaderProgramUniforms.textureMap,0);
 
-//    treeTopperShaderProgram = new CSCI441::ShaderProgram("shaders/treeTopper.v.glsl", "shaders/treeTopper.f.glsl");
-//    treeTopperShaderProgramUniforms.mvpMatrix = treeTopperShaderProgram->getUniformLocation("mvpMatrix");
-//    treeTopperShaderProgramUniforms.topperColor = treeTopperShaderProgram->getUniformLocation("topperColor");
-//    treeTopperShaderProgramAttributes.vPos = treeTopperShaderProgram->getAttributeLocation("vPos");
+    treeTopperShaderProgram = new CSCI441::ShaderProgram("shaders/treeTopper.v.glsl", "shaders/treeTopper.f.glsl");
+    treeTopperShaderProgramUniforms.mvpMatrix = treeTopperShaderProgram->getUniformLocation("mvpMatrix");
+    treeTopperShaderProgramUniforms.topperColor = treeTopperShaderProgram->getUniformLocation("topperColor");
+    treeTopperShaderProgramAttributes.vPos = treeTopperShaderProgram->getAttributeLocation("vPos");
 }
 
 void setupBuffers() {
@@ -1769,7 +1768,7 @@ void setupOpenGL() {
     glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );	// set the clear color to black
 }
 
-void setTreeTopperColor(glm::vec3 color) {
+void setTreeTopperColor(glm::vec3 &color) {
     if (getRand() < 0.5) color.r += 0.01;
     else color.r -= 0.01;
     if (color.r > 1.0f) color.r = 1.0f;
@@ -1817,6 +1816,12 @@ void setupScene() {
     srand(time(nullptr));    // seed our random number generator
     generateEnvironment();
 
+    treeTopperShaderProgram->useProgram();
+    // send tree topper color data
+
+    topperColor = glm::vec3(0.5, 0.5, 0.5);
+    glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
+
     lightingShader->useProgram();           // use our lighting shader program so when
     // assign uniforms, they get sent to this shader
 
@@ -1844,9 +1849,6 @@ void setupScene() {
     glUniform3fv(lightingShaderUniforms.spotLightPosition, 1, &spotLightPosition[0]);
     glUniform3fv(lightingShaderUniforms.spotLightDirection, 1, &spotLightDirection[0]);
     glUniform3fv(lightingShaderUniforms.spotLightColor, 1, &spotLightColor[0]);
-
-    topperColor = glm::vec3(0.5, 0.5, 0.5);
-    glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
 }
 
 void updateScene() {
@@ -1856,7 +1858,6 @@ void updateScene() {
 void setupTextures() {
     // LOOKHERE #4
     spriteTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/snowflake.png");
-
     /// loading in the files for each plane's texture
     rightTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/posx.jpg");
     leftTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/negx.jpg");
@@ -1896,6 +1897,7 @@ int main() {
     printf("\tCtrl and Left Click and move mouse - Zoom arcball cam\n");
     printf("\t2 - Toggle first person camera window\n");
     printf("\tQ / ESC - Quit program\n");
+
 
     //  This is our draw loop - all rendering is done here.  We use a loop to keep the window open
     //	until the user decides to close the window and quit the program.  Without a loop, the
