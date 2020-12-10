@@ -79,7 +79,6 @@ struct CandyCanes {                     // keeps track of an individual bush's a
 };
 std::vector<CandyCanes> candyCanes;         // list of bushes
 
-
 // TODO Christmas Tree
 struct ChristmasTree {
     glm::mat4 modelMatrix;

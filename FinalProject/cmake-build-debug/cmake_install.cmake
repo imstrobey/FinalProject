@@ -1,8 +1,8 @@
-# Install script for directory: D:/CSCI 441/FinalProject/FinalProject
+# Install script for directory: C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "C:/Program Files (x86)/MIDTERM")
+  set(CMAKE_INSTALL_PREFIX "C:/Program Files (x86)/FinalProject")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -40,5 +40,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "D:/CSCI 441/FinalProject/FinalProject/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
