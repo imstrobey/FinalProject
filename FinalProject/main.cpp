@@ -665,6 +665,41 @@ void drawSantaBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
     CSCI441::drawSolidSphere(1.0f,10,10);
 }
+void drawSantaLeftArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(6.0f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
+    modelMtx = glm::rotate(modelMtx, glm::radians(90.0f), glm::vec3(1.0f,1.0f,10.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaHeadColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaHeadColor[0]);
+    CSCI441::drawSolidCylinder(0.4f, 0.3f, 1.5, 10, 10);
+}
+void drawSantaLeftHand(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-1.8f, 9.0f, 11.5f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.3f, 2.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.4,0.4,0.4});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+
+void drawSantaRightArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(14.0f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
+    modelMtx = glm::rotate(modelMtx, glm::radians(90.0f), glm::vec3(1.0f,1.0f,-10.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaHeadColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaHeadColor[0]);
+    CSCI441::drawSolidCylinder(0.4f, 0.3f, 1.5, 10, 10);
+}
+void drawSantaRightHand(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(21.3f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.3f, 2.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.4,0.4,0.4});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
 
 void drawSantaBelt(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     modelMtx = glm::translate(modelMtx, glm::vec3(10.0f, 5.0f, 10.0f));
@@ -781,6 +816,10 @@ void drawEvilSanta(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     drawSantaHat(modelMtx,viewMtx,projMtx);
     drawSantaEyes(modelMtx,viewMtx,projMtx);
     //drawSantaBeard(modelMtx,viewMtx,projMtx);
+    drawSantaLeftArm(modelMtx,viewMtx,projMtx);
+    drawSantaLeftHand(modelMtx,viewMtx,projMtx);
+    drawSantaRightArm(modelMtx,viewMtx,projMtx);
+    drawSantaRightHand(modelMtx,viewMtx,projMtx);
 }
 
 /// Blossom drawing functions
