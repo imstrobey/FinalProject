@@ -1,10 +1,9 @@
 1. Land Name: Bikini Bottom
-   Land Members: Jarrison (Liam Stacy), Vlad (Vlad Muresan), Blossom (Emelyn Pak)
+   Land Members: Jarrison (Liam Stacy), Vlad (Vlad Muresan), Blossom (Emelyn Pak), Matenoia (Alex Langfield)
 
-2. Midterm Project / Enter The Park
+2. Final Project / The Grand (Re)Opening!
 
-3. This program implements 3D characters that can be individually controlled to walk throughout our world. There are also 3 different camera models implemented so that the world can be 
-   viewed from different perspectives. Different types of illumination are also displayed. 
+3. <<<TODO: PROGRAM DESCRIPTION>>>
 
 4. - Character Movement:
    	WASD = Jarrison

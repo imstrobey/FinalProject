@@ -5,7 +5,7 @@
  *  File: main.cpp
  *
  *	Base Code Author: Jeffrey Paone - Fall 2020
- *	Additional Work: Vlad Muresan, Emelyn Pak & Liam Stacy
+ *	Additional Work: Alex Langfield, Vlad Muresan, Emelyn Pak & Liam Stacy
  *
  *  Description:
  *      Contains the midterm project source code for pitcrew VAOs VBOs and MVPs
@@ -37,7 +37,7 @@
 // Global Parameters
 
 const GLint WINDOW_WIDTH = 640, WINDOW_HEIGHT = 480;    //window width and height
-const int MAX_POS = 50;
+const int MAX_POS = 77;
 const GLfloat quadSize = 80.0f;
 
 int leftMouseButton;    	 				// status of the mouse button
@@ -78,7 +78,6 @@ struct CandyCanes {                     // keeps track of an individual bush's a
     glm::vec3 color;                // bush color
 };
 std::vector<CandyCanes> candyCanes;         // list of bushes
-
 
 // TODO Christmas Tree
 struct ChristmasTree {
@@ -156,6 +155,18 @@ struct BillboardShaderProgramUniforms {
 struct BillboardShaderProgramAttributes {
     GLint vPos;                         // the vertex position
 } billboardShaderProgramAttributes;
+
+// Tree topper shader program
+CSCI441::ShaderProgram *treeTopperShaderProgram = nullptr;
+struct TreeTopperShaderProgramUniforms {
+    GLint mvpMatrix;
+    GLint topperColor;
+} treeTopperShaderProgramUniforms;
+struct TreeTopperShaderProgramAttributes {
+    GLint vPos;                         // the vertex position
+} treeTopperShaderProgramAttributes;
+
+glm::vec3 topperColor;
 
 /// keeps track of sprite shader program
 CSCI441::ShaderProgram *texShaderProgram = nullptr;
@@ -581,26 +592,15 @@ void drawCandyCane(CandyCanes cane, glm::mat4 viewMtx, glm::mat4 projMtx){
     float base = 2.0f,top = 1.8f;
 
     for(int i = 0; i < 8; i++){
-        if(i%2){
-            candyColor = candyColorRed;
-            base -= 0.2;
-            top -= 0.2;
-            glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
-            CSCI441::drawSolidCylinder(base,top,3.0f,10,10);
-            transMtx = glm::translate(transMtx,glm::vec3(0.0f,3.0f,0.0f));
-            cane.modelMatrix = transMtx;
-            computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
-        }
-        else{
-            candyColor = candyColorWhite;
-            base -= 0.2;
-            top -= 0.2;
-            glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
-            CSCI441::drawSolidCylinder(base,top,3.0f,10,10);
-            transMtx = glm::translate(transMtx,glm::vec3(0.0f,3.0f,0.0f));
-            cane.modelMatrix = transMtx;
-            computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
-        }
+        if(i%2) { candyColor = candyColorRed; }
+        else { candyColor = candyColorWhite; }
+        base -= 0.2;
+        top -= 0.2;
+        glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
+        CSCI441::drawSolidCylinder(base,top,3.0f,10,10);
+        transMtx = glm::translate(transMtx,glm::vec3(0.0f,3.0f,0.0f));
+        cane.modelMatrix = transMtx;
+        computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
     }
 
     candyColor = candyColorWhite;
@@ -745,6 +745,7 @@ void drawSantaHat(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     glUniform3fv(lightingShaderUniforms.materialColor,1,&santaHatTrimColor[0]);
     CSCI441::drawSolidSphere(0.15,10,10);
 }
+
 // TODO santa eyes hemispheres???
 void drawSantaEyes(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     modelMtx = glm::translate(modelMtx, glm::vec3(9.0f, 15.0f, 9.0f));
@@ -1125,6 +1126,17 @@ void drawVoltorb(glm::mat4 modelMtx,glm::mat4 viewMtx,glm::mat4 projectMtx){
     drawVoltorbLeftPupil(modelMtx, viewMtx, projectMtx);
 }
 
+void drawTreeTopper(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(-35.0f, 54.0f, -25.0f));
+    computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
+    glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
+    CSCI441::drawSolidSphere(10.0f, 10, 10);
+}
+
+void transposeFlake(glm::vec3 landingPosition, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    // TODO transpose flake
+}
+
 
 // renderScene() ///////////////////////////////////////////////////////////////
 void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -1246,12 +1258,7 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     glm::mat4 modelMatrix = glm::mat4( 1.0f );
 
     // LOOKHERE #3
-
     billboardShaderProgram->useProgram();
-
-//    modelMatrix = glm::rotate(glm::mat4(1.0f), snowglobeAngle, CSCI441::Y_AXIS);
-//    modelMatrix = glm::rotate(glm::mat4(1.0f), 2.0f, glm::vec3(1.0,2.0f,1.0));
-    // modelMatrix = glm::translate(glm::mat4(1.0f), gravity);
 
     computeAndSendTransformationMatrices5( modelMatrix, viewMtx, projMtx,
                                           billboardShaderProgramUniforms.mvMatrix, billboardShaderProgramUniforms.projMatrix);
@@ -1260,19 +1267,19 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     glBindTexture(GL_TEXTURE_2D, spriteTextureHandle);
 
     // TODO #1
-
-
     for(int i = 0; i < NUM_SPRITES; i++){
-        glm::vec3 currentSprite = spriteLocations[ spriteIndices[i] ];
-//        cout << currentSprite.y << endl;
 
         if(spriteLocations[ spriteIndices[i]].y <= 0){
+            // TODO transpose flake
+            glm::vec3 landingPosition = spriteLocations[ spriteIndices[i]];
+            transposeFlake(landingPosition, viewMtx, projMtx);
             spriteLocations[ spriteIndices[i]].y += MAX_BOX_SIZE;
+            // TODO move flake a lil'
         }
         else {
             spriteLocations[ spriteIndices[i]].y -= 0.05;
         }
-//        cout << spriteLocations[ spriteIndices[i] ].y << endl;
+        glm::vec3 currentSprite = spriteLocations[ spriteIndices[i] ];
         glm::vec4 p = modelMatrix * glm::vec4(currentSprite, 1.0f);
         glm::vec4 eyePoints = p - glm::vec4(camPos, 1.0f);
         float dist = dot(glm::vec4(arcballLookAtPoint - camPos,1), eyePoints);
@@ -1310,6 +1317,9 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(GLushort) * NUM_SPRITES, spriteIndices);
 
     glDrawElements( GL_POINTS, NUM_SPRITES, GL_UNSIGNED_SHORT, (void*)0 );
+
+//    treeTopperShaderProgram->useProgram();
+//    drawTreeTopper(modelMatrix, viewMtx, projMtx);
 
     lightingShader->useProgram();
 }
@@ -1432,6 +1442,11 @@ void setupShaders() {
     texShaderProgramAttributes.vPos = texShaderProgram->getAttributeLocation("vPos");
     texShaderProgramAttributes.vTexCoord = texShaderProgram->getAttributeLocation("vTexCoord");
     glUniform1i(texShaderProgramUniforms.textureMap,0);
+
+//    treeTopperShaderProgram = new CSCI441::ShaderProgram("shaders/treeTopper.v.glsl", "shaders/treeTopper.f.glsl");
+//    treeTopperShaderProgramUniforms.mvpMatrix = treeTopperShaderProgram->getUniformLocation("mvpMatrix");
+//    treeTopperShaderProgramUniforms.topperColor = treeTopperShaderProgram->getUniformLocation("topperColor");
+//    treeTopperShaderProgramAttributes.vPos = treeTopperShaderProgram->getAttributeLocation("vPos");
 }
 
 void setupBuffers() {
@@ -1444,52 +1459,48 @@ void setupBuffers() {
 
     VertexNormal groundQuad[4] = {
             {-1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f},
-            { 1.0f, 0.0f, -1.0f,0.0f, 1.0f, 0.0f},
-            {-1.0f, 0.0f,  1.0f,0.0f, 1.0f, 0.0f},
-            { 1.0f, 0.0f,  1.0f,0.0f, 1.0f, 0.0f}
+            {1.0f,  0.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+            {-1.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f},
+            {1.0f,  0.0f, 1.0f,  0.0f, 1.0f, 0.0f}
     };
 
-    GLushort indices[4] = {0,1,2,3};
+    GLushort indices[4] = {0, 1, 2, 3};
 
     /// sprite
-    glGenVertexArrays( NUM_VAOS, vaos );
-    glGenBuffers( NUM_VAOS, vbos );
-    glGenBuffers( NUM_VAOS, ibos );
+    glGenVertexArrays(NUM_VAOS, vaos);
+    glGenBuffers(NUM_VAOS, vbos);
+    glGenBuffers(NUM_VAOS, ibos);
 
     // --------------------------------------------------------------------------------------------------
     // LOOKHERE #2 - generate sprites
 
-    spriteLocations = (glm::vec3*)malloc(sizeof(glm::vec3) * NUM_SPRITES);
-    spriteIndices = (GLushort*)malloc(sizeof(GLushort) * NUM_SPRITES);
-    distances = (GLfloat*)malloc(sizeof(GLfloat) * NUM_SPRITES);
-    for( int i = 0; i < NUM_SPRITES; i++ ) {
-        glm::vec3 pos( randNumber(MAX_BOX_SIZE), randNumber(NEW_BOX_SIZE), randNumber(MAX_BOX_SIZE) );
+    spriteLocations = (glm::vec3 *) malloc(sizeof(glm::vec3) * NUM_SPRITES);
+    spriteIndices = (GLushort *) malloc(sizeof(GLushort) * NUM_SPRITES);
+    distances = (GLfloat *) malloc(sizeof(GLfloat) * NUM_SPRITES);
+    for (int i = 0; i < NUM_SPRITES; i++) {
+        glm::vec3 pos(randNumber(MAX_BOX_SIZE), randNumber(NEW_BOX_SIZE), randNumber(MAX_BOX_SIZE));
         spriteLocations[i] = pos;
         spriteIndices[i] = i;
-
-//        if(spriteLocations[i].y <= 0){
-//            spriteLocations[i].y = randNumber(NEW_BOX_SIZE);
-//        }
-//        cout << spriteLocations[i].y << endl;
-
-        //not quite working right
-
-//        cout << pos.y << endl;
     }
 
-    glBindVertexArray( vaos[VAOS.PARTICLE_SYSTEM] );
+    glBindVertexArray(vaos[VAOS.PARTICLE_SYSTEM]);
 
-    glBindBuffer( GL_ARRAY_BUFFER, vbos[VAOS.PARTICLE_SYSTEM] );
-    glBufferData( GL_ARRAY_BUFFER, NUM_SPRITES * sizeof(glm::vec3), spriteLocations, GL_STATIC_DRAW );
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[VAOS.PARTICLE_SYSTEM]);
+    glBufferData(GL_ARRAY_BUFFER, NUM_SPRITES * sizeof(glm::vec3), spriteLocations, GL_STATIC_DRAW);
 
-    glEnableVertexAttribArray( billboardShaderProgramAttributes.vPos );
-    glVertexAttribPointer( billboardShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0 );
+    glEnableVertexAttribArray(billboardShaderProgramAttributes.vPos);
+    glVertexAttribPointer(billboardShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
 
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibos[VAOS.PARTICLE_SYSTEM] );
-    glBufferData( GL_ELEMENT_ARRAY_BUFFER, NUM_SPRITES * sizeof(GLushort), spriteIndices, GL_STATIC_DRAW );
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibos[VAOS.PARTICLE_SYSTEM]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, NUM_SPRITES * sizeof(GLushort), spriteIndices, GL_STATIC_DRAW);
 
-    fprintf( stdout, "[INFO]: point sprites read in with VAO/VBO/IBO %d/%d/%d\n", vaos[VAOS.PARTICLE_SYSTEM], vbos[VAOS.PARTICLE_SYSTEM], ibos[VAOS.PARTICLE_SYSTEM] );
+    fprintf(stdout, "[INFO]: point sprites read in with VAO/VBO/IBO %d/%d/%d\n", vaos[VAOS.PARTICLE_SYSTEM],
+            vbos[VAOS.PARTICLE_SYSTEM], ibos[VAOS.PARTICLE_SYSTEM]);
     /// end sprite
+
+    /// send tree topper vPos
+    glEnableVertexAttribArray(treeTopperShaderProgramAttributes.vPos);
+    glVertexAttribPointer(treeTopperShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
 
     glGenVertexArrays(1, &groundVAO);
     glBindVertexArray(groundVAO);
@@ -1500,10 +1511,11 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(groundQuad), groundQuad, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(lightingShaderAttributes.vPos);
-    glVertexAttribPointer(lightingShaderAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void*)0);
+    glVertexAttribPointer(lightingShaderAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void *) 0);
 
     glEnableVertexAttribArray(lightingShaderAttributes.vertexNormal);
-    glVertexAttribPointer(lightingShaderAttributes.vertexNormal, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void*)(3*sizeof(float)));
+    glVertexAttribPointer(lightingShaderAttributes.vertexNormal, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal),
+                          (void *) (3 * sizeof(float)));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbods[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -1511,19 +1523,19 @@ void setupBuffers() {
     ////////////////////////////////////////////////// left plane /////////////////////////////////////////////////////
 
     struct VertexTextured { /// struct for drawing each plane of our skybox
-        float x,y,z;
-        float s,t;
+        float x, y, z;
+        float s, t;
     };
 
     VertexTextured leftTexVertices[4] = {
-            {quadSize, 0.0f,-quadSize,0.0f,0.0f},
-            {quadSize,0.0f ,quadSize,1.0f,0.0f},
-            {quadSize,quadSize,-quadSize,0.0f,1.0f},
-            {quadSize,quadSize,quadSize,1.0f,1.0f}
+            {quadSize, 0.0f,     -quadSize, 0.0f, 0.0f},
+            {quadSize, 0.0f,     quadSize,  1.0f, 0.0f},
+            {quadSize, quadSize, -quadSize, 0.0f, 1.0f},
+            {quadSize, quadSize, quadSize,  1.0f, 1.0f}
     };
-    unsigned short leftTexIndices[4] = {0,1,2,3};
+    unsigned short leftTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&leftVAO);
+    glGenVertexArrays(1, &leftVAO);
     glBindVertexArray(leftVAO);
 
     glGenBuffers(2, leftVBO);
@@ -1532,10 +1544,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(leftTexVertices), leftTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, leftVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(leftTexIndices), leftTexIndices, GL_STATIC_DRAW);
@@ -1545,14 +1559,14 @@ void setupBuffers() {
 
     ////////////////////////////////////////////////// right plane /////////////////////////////////////////////////////
     VertexTextured rightTexVertices[4] = {
-            {-quadSize, 0.0f,quadSize,0.0f,0.0f},
-            {-quadSize,0.0f ,-quadSize,1.0f,0.0f},
-            {-quadSize,quadSize,quadSize,0.0f,1.0f},
-            {-quadSize,quadSize,-quadSize,1.0f,1.0f}
+            {-quadSize, 0.0f,     quadSize,  0.0f, 0.0f},
+            {-quadSize, 0.0f,     -quadSize, 1.0f, 0.0f},
+            {-quadSize, quadSize, quadSize,  0.0f, 1.0f},
+            {-quadSize, quadSize, -quadSize, 1.0f, 1.0f}
     };
-    unsigned short rightTexIndices[4] = {0,1,2,3};
+    unsigned short rightTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&rightVAO);
+    glGenVertexArrays(1, &rightVAO);
     glBindVertexArray(rightVAO);
 
     glGenBuffers(2, rightVBO);
@@ -1561,10 +1575,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(rightTexVertices), rightTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rightVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rightTexIndices), rightTexIndices, GL_STATIC_DRAW);
@@ -1574,14 +1590,14 @@ void setupBuffers() {
 
     ////////////////////////////////////////////////// back plane /////////////////////////////////////////////////////
     VertexTextured backTexVertices[4] = {
-            {-quadSize,0.0f ,-quadSize,0.0f,0.0f},
-            {quadSize, 0.0f,-quadSize,1.0f,0.0f},
-            {-quadSize,quadSize,-quadSize,0.0f,1.0f},
-            {quadSize,quadSize,-quadSize,1.0f,1.0f}
+            {-quadSize, 0.0f,     -quadSize, 0.0f, 0.0f},
+            {quadSize,  0.0f,     -quadSize, 1.0f, 0.0f},
+            {-quadSize, quadSize, -quadSize, 0.0f, 1.0f},
+            {quadSize,  quadSize, -quadSize, 1.0f, 1.0f}
     };
-    unsigned short backTexIndices[4] = {0,1,2,3};
+    unsigned short backTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&backVAO);
+    glGenVertexArrays(1, &backVAO);
     glBindVertexArray(backVAO);
 
     glGenBuffers(2, backVBO);
@@ -1590,10 +1606,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(backTexVertices), backTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, backVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(backTexIndices), backTexIndices, GL_STATIC_DRAW);
@@ -1603,14 +1621,14 @@ void setupBuffers() {
 
     ////////////////////////////////////////////////// front plane /////////////////////////////////////////////////////
     VertexTextured frontTexVertices[4] = {
-            {quadSize,0.0f ,quadSize,0.0f,0.0f},
-            {-quadSize, 0.0f,quadSize,1.0f,0.0f},
-            {quadSize,quadSize,quadSize,0.0f,1.0f},
-            {-quadSize,quadSize,quadSize,1.0f,1.0f}
+            {quadSize,  0.0f,     quadSize, 0.0f, 0.0f},
+            {-quadSize, 0.0f,     quadSize, 1.0f, 0.0f},
+            {quadSize,  quadSize, quadSize, 0.0f, 1.0f},
+            {-quadSize, quadSize, quadSize, 1.0f, 1.0f}
     };
-    unsigned short frontTexIndices[4] = {0,1,2,3};
+    unsigned short frontTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&frontVAO);
+    glGenVertexArrays(1, &frontVAO);
     glBindVertexArray(frontVAO);
 
     glGenBuffers(2, frontVBO);
@@ -1619,10 +1637,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(frontTexVertices), frontTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, frontVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(frontTexIndices), frontTexIndices, GL_STATIC_DRAW);
@@ -1632,14 +1652,14 @@ void setupBuffers() {
 
     ////////////////////////////////////////////////// top plane /////////////////////////////////////////////////////
     VertexTextured topTexVertices[4] = {
-            {quadSize,quadSize,-quadSize,0.0f,1.0f},
-            {-quadSize,quadSize,-quadSize,1.0f,1.0f},
-            {quadSize,quadSize,quadSize,0.0f,0.0f},
-            {-quadSize,quadSize,quadSize,1.0f,0.0f}
+            {quadSize,  quadSize, -quadSize, 0.0f, 1.0f},
+            {-quadSize, quadSize, -quadSize, 1.0f, 1.0f},
+            {quadSize,  quadSize, quadSize,  0.0f, 0.0f},
+            {-quadSize, quadSize, quadSize,  1.0f, 0.0f}
     };
-    unsigned short topTexIndices[4] = {0,1,2,3};
+    unsigned short topTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&topVAO);
+    glGenVertexArrays(1, &topVAO);
     glBindVertexArray(topVAO);
 
     glGenBuffers(2, topVBO);
@@ -1648,10 +1668,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(topTexVertices), topTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, topVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(topTexIndices), topTexIndices, GL_STATIC_DRAW);
@@ -1708,6 +1730,23 @@ void setupOpenGL() {
     glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );	// set the clear color to black
 }
 
+void setTreeTopperColor(glm::vec3 color) {
+    if (getRand() < 0.5) color.r += 0.01;
+    else color.r -= 0.01;
+    if (color.r > 1.0f) color.r = 1.0f;
+    if (color.r < 0.0f) color.r = 0.0f;
+
+    if (getRand() < 0.5) color.b += 0.01;
+    else color.b -= 0.01;
+    if (color.b > 1.0f) color.b = 1.0f;
+    if (color.b < 0.0f) color.b = 0.0f;
+
+    if (getRand() < 0.5) color.g += 0.01;
+    else color.g -= 0.01;
+    if (color.g > 1.0f) color.g = 1.0f;
+    if (color.g < 0.0f) color.g = 0.0f;
+}
+
 void setupScene() {
     // give the camera a scenic starting point.
     camPos.x = 60;
@@ -1743,7 +1782,7 @@ void setupScene() {
     // assign uniforms, they get sent to this shader
 
     // TODO #4 set the light direction and color
-    glm::vec3 lightDirection = glm::vec3(-1, -1, -1);
+    glm::vec3 lightDirection = glm::vec3(-1, -1, 1);
     glm::vec3 lightColor = glm::vec3(1, 1, 1);
     glm::vec3 pointLightColor = glm::vec3(1, 1,1);
     // for point light
@@ -1766,15 +1805,13 @@ void setupScene() {
     glUniform3fv(lightingShaderUniforms.spotLightPosition, 1, &spotLightPosition[0]);
     glUniform3fv(lightingShaderUniforms.spotLightDirection, 1, &spotLightDirection[0]);
     glUniform3fv(lightingShaderUniforms.spotLightColor, 1, &spotLightColor[0]);
+
+    topperColor = glm::vec3(0.5, 0.5, 0.5);
+    glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
 }
 
 void updateScene() {
-    /*snowglobeAngle += 0.01f;
-    if(snowglobeAngle >= 6.28f) {
-        snowglobeAngle -= 6.28f;
-    }*/
-//    float yChange = -0.05;
-//    gravity.y += yChange;
+    setTreeTopperColor(topperColor);
 }
 
 void setupTextures() {
@@ -1879,7 +1916,6 @@ int main() {
         glfwSwapBuffers(window);                        // flush the OpenGL commands and make sure they get rendered!
         glfwPollEvents();				                // check for any events and signal to redraw screen
 
-        // jarrison constant animation
         updateJarrisonAnimation();
         updateSantaDirection();
 
