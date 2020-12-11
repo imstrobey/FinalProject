@@ -3,12 +3,13 @@
 //uniforms
 uniform mat4 mvpMtx;
 uniform mat3 normalMtx;
-//uniform mat4 modelMtx;
+uniform mat4 modelMtx;
 uniform vec3 camPos; //position of the camera
 
 //point light uniforms
 uniform vec3 lightPositionPoint;
 uniform vec3 lightColorPoint;
+uniform vec3 lightDirection;
 
 uniform vec3 materialColor; //color of the object
 

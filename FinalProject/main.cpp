@@ -149,9 +149,7 @@ CSCI441::ShaderProgram *candleShader = nullptr;
 struct CandleShaderUniforms {
     GLint normalMtx;
     GLint mvpMatrix;
-/*
     GLint modelMtx;
-*/
     GLint lightPositionPoint;
     GLint lightColorPoint;
     GLint lightDirection;
@@ -324,9 +322,7 @@ void computeMtxUniformsCandle(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 p
     glm::mat3 normalMtx = glm::mat3(glm::transpose(glm::inverse(modelMtx)));
     glUniformMatrix3fv(candleShaderUniforms.normalMtx, 1, GL_FALSE, &normalMtx[0][0]);
 
-/*
     glUniformMatrix4fv(candleShaderUniforms.modelMtx, 1, GL_FALSE, &modelMtx[0][0]);
-*/
 }
 
 void computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -1362,6 +1358,7 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
         drawCandyCane(c , viewMtx, projMtx);
     }
 
+    // TODO Candle Shader in Render
     candleShader->useProgram();
     glUniform3fv(candleShaderUniforms.camPos,1,&camPos[0]);
     glm::mat4 candleModelMtx = glm::mat4(1.0f);
@@ -1565,9 +1562,7 @@ void setupShaders() {
     candleShader = new CSCI441::ShaderProgram("shaders/candleShader.v.glsl", "shaders/candleShader.f.glsl");
     candleShaderUniforms.mvpMatrix = candleShader->getUniformLocation("mvpMtx");
     candleShaderUniforms.normalMtx = candleShader->getUniformLocation("normalMtx");
-/*
     candleShaderUniforms.modelMtx = candleShader->getUniformLocation("modelMtx");
-*/
 
     candleShaderUniforms.lightPositionPoint = candleShader->getUniformLocation("lightPositionPoint");
     candleShaderUniforms.lightColorPoint = candleShader->getUniformLocation("lightColorPoint");
@@ -1927,17 +1922,14 @@ void setupScene() {
     /////////////////////////////////////////////
     candleShader->useProgram();
 
-    //glm::vec3 lightPoint = glm::vec3(-55.0, 5.0, -55.0);
+    //glm::vec3 candleLightPos = glm::vec3(-55.0, 5.0, -55.0);
     glm::vec3 candleLightPos = glm::vec3(10.0,9.0,10.0);
     glm::vec3 candleLightColor = glm::vec3(0,0,1);
     glm::vec3 candleLightDirection = glm::vec3(0,1,0);
 
-    /*glm::vec3 lightVec = glm::vec3(-1.0, -1.0, -1.0);
-    glm::vec3 lightVecColr = glm::vec3(.1, .1, 1);*/
-
     glUniform3fv(candleShaderUniforms.lightPositionPoint, 1, &candleLightPos[0]);
     glUniform3fv(candleShaderUniforms.lightColorPoint, 1, &candleLightColor[0]);
-    //glUniform3fv(candleShaderUniforms.camPos, 1, &camPos[0]);
+    glUniform3fv(candleShaderUniforms.camPos, 1, &camPos[0]);
     glUniform3fv(candleShaderUniforms.lightDirection, 1, &candleLightDirection[0]);
 
     lightingShader->useProgram();
