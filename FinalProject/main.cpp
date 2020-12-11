@@ -901,6 +901,28 @@ void drawCandles(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     glUniform3fv(candleShaderUniforms.materialColor,1,&candleColor[0]);
     CSCI441::drawSolidSphere(5.0f,10,10);
 }
+void drawCandleBase(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-10.3f, 6.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 7.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawCandleString(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-10.3f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(0.5f, 1.5f, 0.5f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{1.0,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+
+void drawCandleModel(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    drawCandleBase(modelMtx,viewMtx,projMtx);
+    drawCandleString(modelMtx,viewMtx,projMtx);
+}
 
 /// Blossom drawing functions
 void drawBlossomBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
@@ -1332,6 +1354,9 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     greenOrnamentModelMtx = glm::translate(greenOrnamentModelMtx, glm::vec3(0.3f, 13.0f, 10.0f));
     drawGreenOrnament(greenOrnamentModelMtx, viewMtx, projMtx);
+
+    glm::mat4 candleModelModelMtx(1.0f);
+    drawCandleModel(candleModelModelMtx, viewMtx, projMtx);
 
     /// draw jarrison
     glm::mat4 jarrisonModelMtx(1.0f);
