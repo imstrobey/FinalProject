@@ -90,7 +90,7 @@ void main() {
         spotDiffuse = vec3(0, 0, 0);
     }
 
-    // TODO
+    // TODO POINT LIGHT
 
     // implement attenuation
     float constant = 1.0f;
@@ -108,6 +108,7 @@ void main() {
     linear = 0.9f;
     quadratic = 0.9f;
 
+    // TODO
     float spotDistance = length(spotLightPosition - vPos);
     float spotAttenuation = 1.0f / (constant + linear * spotDistance + quadratic * (spotDistance * spotDistance));
 

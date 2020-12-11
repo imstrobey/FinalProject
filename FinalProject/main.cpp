@@ -5,7 +5,7 @@
  *  File: main.cpp
  *
  *	Base Code Author: Jeffrey Paone - Fall 2020
- *	Additional Work: Vlad Muresan, Emelyn Pak & Liam Stacy
+ *	Additional Work: Alex Langfield, Vlad Muresan, Emelyn Pak & Liam Stacy
  *
  *  Description:
  *      Contains the midterm project source code for pitcrew VAOs VBOs and MVPs
@@ -37,7 +37,7 @@
 // Global Parameters
 
 const GLint WINDOW_WIDTH = 640, WINDOW_HEIGHT = 480;    //window width and height
-const int MAX_POS = 50;
+const int MAX_POS = 77;
 const GLfloat quadSize = 80.0f;
 
 int leftMouseButton;    	 				// status of the mouse button
@@ -145,6 +145,25 @@ struct LightingShaderAttributes {       // stores the locations of all of our sh
     GLint vPos;
 } lightingShaderAttributes;
 
+CSCI441::ShaderProgram *candleShader = nullptr;
+struct CandleShaderUniforms {
+    GLint normalMtx;
+    GLint mvpMatrix;
+/*
+    GLint modelMtx;
+*/
+    GLint lightPositionPoint;
+    GLint lightColorPoint;
+    GLint lightDirection;
+    GLint materialColor;
+    GLint camPos;
+
+} candleShaderUniforms;
+struct CandleShaderAttributes {
+    GLint vPos;
+    GLint vNormal;
+} candleShaderAttributes;
+
 // Billboard shader program
 CSCI441::ShaderProgram *billboardShaderProgram = nullptr;
 struct BillboardShaderProgramUniforms {
@@ -155,6 +174,18 @@ struct BillboardShaderProgramUniforms {
 struct BillboardShaderProgramAttributes {
     GLint vPos;                         // the vertex position
 } billboardShaderProgramAttributes;
+
+// Tree topper shader program
+CSCI441::ShaderProgram *treeTopperShaderProgram = nullptr;
+struct TreeTopperShaderProgramUniforms {
+    GLint mvpMatrix;
+    GLint topperColor;
+} treeTopperShaderProgramUniforms;
+struct TreeTopperShaderProgramAttributes {
+    GLint vPos;                         // the vertex position
+} treeTopperShaderProgramAttributes;
+
+glm::vec3 topperColor;
 
 /// keeps track of sprite shader program
 CSCI441::ShaderProgram *texShaderProgram = nullptr;
@@ -175,7 +206,6 @@ glm::vec3* spriteLocations = nullptr;   // the (x,y,z) location of each sprite
 GLushort* spriteIndices = nullptr;      // the order to draw the sprites in
 GLfloat* distances = nullptr;           // will be used to store the distance to the camera
 GLuint spriteTextureHandle;             // the texture to apply to the sprite
-GLfloat snowglobeAngle;                 // rotates all of our snowflakes
 const GLfloat NEW_BOX_SIZE = 35;
 glm::vec3 gravity = glm::vec3(0,-1.0f,0);
 
@@ -285,6 +315,18 @@ void updateFirstPerson() {
         fpCamPos = {blossomX + 5.0f * sin(blossomRotation), blossomY + 2.0, blossomZ + 5.0f * cos(blossomRotation)};
         fpCamLookAtPoint = {blossomX + 10.0f * sin(blossomRotation) , blossomY + 2.0f, (blossomZ) + 10.0f * cos(blossomRotation)};
     }
+}
+
+void computeMtxUniformsCandle(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
+    glUniformMatrix4fv(candleShaderUniforms.mvpMatrix, 1, GL_FALSE, &mvpMtx[0][0]);
+
+    glm::mat3 normalMtx = glm::mat3(glm::transpose(glm::inverse(modelMtx)));
+    glUniformMatrix3fv(candleShaderUniforms.normalMtx, 1, GL_FALSE, &normalMtx[0][0]);
+
+/*
+    glUniformMatrix4fv(candleShaderUniforms.modelMtx, 1, GL_FALSE, &modelMtx[0][0]);
+*/
 }
 
 void computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -562,13 +604,6 @@ void drawChristmasTreeTrunk(ChristmasTreeTrunk trunk, glm::mat4 viewMtx, glm::ma
     CSCI441::drawSolidCylinder(4.0f, 4.0f, 10.0f, 10, 10);
 }
 
-/// drawing bushes for the environment
-/*void drawBush(Bushes bush, glm::mat4 viewMtx, glm::mat4 projMtx){
-    computeAndSendMatrixUniforms(bush.modelMatrix, viewMtx, projMtx);
-    glUniform3fv(lightingShaderUniforms.materialColor, 1, &bush.color[0]);
-    CSCI441::drawSolidTopHemisphere(2.0f,10.0f,10.0f);
-}*/
-
 void drawCandyCane(CandyCanes cane, glm::mat4 viewMtx, glm::mat4 projMtx){
     computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
     glm::vec3 candyColor(glm::vec3{1.0,0.0,0.0});
@@ -580,26 +615,15 @@ void drawCandyCane(CandyCanes cane, glm::mat4 viewMtx, glm::mat4 projMtx){
     float base = 2.0f,top = 1.8f;
 
     for(int i = 0; i < 8; i++){
-        if(i%2){
-            candyColor = candyColorRed;
-            base -= 0.2;
-            top -= 0.2;
-            glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
-            CSCI441::drawSolidCylinder(base,top,3.0f,10,10);
-            transMtx = glm::translate(transMtx,glm::vec3(0.0f,3.0f,0.0f));
-            cane.modelMatrix = transMtx;
-            computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
-        }
-        else{
-            candyColor = candyColorWhite;
-            base -= 0.2;
-            top -= 0.2;
-            glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
-            CSCI441::drawSolidCylinder(base,top,3.0f,10,10);
-            transMtx = glm::translate(transMtx,glm::vec3(0.0f,3.0f,0.0f));
-            cane.modelMatrix = transMtx;
-            computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
-        }
+        if(i%2) { candyColor = candyColorRed; }
+        else { candyColor = candyColorWhite; }
+        base -= 0.2;
+        top -= 0.2;
+        glUniform3fv(lightingShaderUniforms.materialColor, 1, &candyColor[0]);
+        CSCI441::drawSolidCylinder(base,top,3.0f,10,10);
+        transMtx = glm::translate(transMtx,glm::vec3(0.0f,3.0f,0.0f));
+        cane.modelMatrix = transMtx;
+        computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
     }
 
     candyColor = candyColorWhite;
@@ -663,6 +687,95 @@ void drawSantaBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     glm::vec3 santaBodyColor(glm::vec3{1.0,0.0,0.0});
     glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
     CSCI441::drawSolidSphere(1.0f,10,10);
+}
+void drawSantaLeftArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(6.0f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
+    modelMtx = glm::rotate(modelMtx, glm::radians(90.0f), glm::vec3(1.0f,1.0f,10.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaHeadColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaHeadColor[0]);
+    CSCI441::drawSolidCylinder(0.4f, 0.3f, 1.5, 10, 10);
+}
+void drawSantaLeftHand(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-1.8f, 9.0f, 11.5f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.3f, 2.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.4,0.4,0.4});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+
+void drawSantaBazookaBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 12.0f, 2.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
+    modelMtx = glm::rotate(modelMtx, glm::radians(90.0f), glm::vec3(10.0f,1.0f,1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaHeadColor(glm::vec3{0.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaHeadColor[0]);
+    CSCI441::drawSolidCylinder(0.2f, 0.2f, 2.5, 10, 10);
+}
+
+void drawSantaBazookaFrontEnd(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 12.0f, 2.4f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 2.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.0,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+
+void drawSantaBazookaBackEnd(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 12.0f, 15.2f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 2.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.0,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+void drawSantaBazookaHandle(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 10.0f, 11.5f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 5.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{0.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawSantaBazookaScopeBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 13.0f, 5.5f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 5.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{0.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawSantaBazookaScopeVisor(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-2.0f, 15.0f, 5.5f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(6.0f, 6.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawSantaRightArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(14.0f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
+    modelMtx = glm::rotate(modelMtx, glm::radians(90.0f), glm::vec3(1.0f,1.0f,-10.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaHeadColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaHeadColor[0]);
+    CSCI441::drawSolidCylinder(0.4f, 0.3f, 1.5, 10, 10);
+}
+void drawSantaRightHand(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(21.3f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.3f, 2.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.4,0.4,0.4});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
 }
 
 void drawSantaBelt(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
@@ -744,6 +857,7 @@ void drawSantaHat(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     glUniform3fv(lightingShaderUniforms.materialColor,1,&santaHatTrimColor[0]);
     CSCI441::drawSolidSphere(0.15,10,10);
 }
+
 // TODO santa eyes hemispheres???
 void drawSantaEyes(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     modelMtx = glm::translate(modelMtx, glm::vec3(9.0f, 15.0f, 9.0f));
@@ -758,16 +872,6 @@ void drawSantaEyes(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     CSCI441::drawSolidSphere(0.2,10,10);
 }
 
-/*void drawSantaBeard(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(10.0f, 13.0f, 5.5f));
-    modelMtx = glm::scale(modelMtx, glm::vec3(6.0f, 5.0f, 6.0f));
-    modelMtx = glm::rotate(modelMtx, glm::radians(90.0f), glm::vec3(10.0f,13.0f,5.5f));
-    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
-    glm::vec3 santaMouthColor(glm::vec3{1.0,1.0,1.0});
-    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaMouthColor[0]);
-    CSCI441::drawSolidCone(0.5f,1.0,10,10);
-}*/
-
 void drawEvilSanta(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     drawSantaBody(modelMtx,viewMtx,projMtx);
     drawSantaBelt(modelMtx,viewMtx,projMtx);
@@ -778,15 +882,30 @@ void drawEvilSanta(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     drawSantaHead(modelMtx,viewMtx,projMtx);
     drawSantaHat(modelMtx,viewMtx,projMtx);
     drawSantaEyes(modelMtx,viewMtx,projMtx);
-    //drawSantaBeard(modelMtx,viewMtx,projMtx);
+    drawSantaLeftArm(modelMtx,viewMtx,projMtx);
+    drawSantaLeftHand(modelMtx,viewMtx,projMtx);
+    drawSantaRightArm(modelMtx,viewMtx,projMtx);
+    drawSantaRightHand(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaBody(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaFrontEnd(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaBackEnd(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaHandle(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaScopeBody(modelMtx,viewMtx,projMtx);
+    drawSantaBazookaScopeVisor(modelMtx,viewMtx,projMtx);
+}
+
+void drawCandles(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(10,10,10));
+    computeMtxUniformsCandle(modelMtx,viewMtx,projMtx);
+    glm::vec3 candleColor(glm::vec3{1.0,1.0,1.0});
+    glUniform3fv(candleShaderUniforms.materialColor,1,&candleColor[0]);
+    CSCI441::drawSolidSphere(5.0f,10,10);
 }
 
 /// Blossom drawing functions
 void drawBlossomBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //glm::mat4 blossomBodyModelMtx(1.0f);
     modelMtx = glm::translate(modelMtx, glm::vec3(blossomX, blossomY+1.5f, blossomZ));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.5f, 1.5f, 1.5f));
-    //blossomBodyModelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
     glm::vec3 bodyColor(glm::vec3{0.9,0.3,0.8});
     glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
@@ -794,10 +913,8 @@ void drawBlossomBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
 }
 
 void drawBlossomHead(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //glm::mat4 blossomHeadModelMtx(1.0f);
     modelMtx = glm::translate(modelMtx, glm::vec3(blossomX, blossomY+3.25f, blossomZ));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.5f, 1.5f, 1.5f));
-    //blossomHeadModelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
     glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.9});
     glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
@@ -805,10 +922,8 @@ void drawBlossomHead(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
 }
 
 void drawBlossomNeck(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //glm::mat4 blossomNeckModelMtx(1.0f);
     modelMtx = glm::translate(modelMtx, glm::vec3(blossomX,blossomY+2.5f,blossomZ));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.5f, 2.0f, 1.5f));
-    //blossomNeckModelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
     glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.9});
     glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
@@ -816,10 +931,8 @@ void drawBlossomNeck(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
 }
 
 void drawBlossomRightArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //glm::mat4 blossomRightArmModelMtx(1.0f);
     modelMtx = glm::translate(modelMtx, glm::vec3(blossomX-1.0f, blossomY+1.5f, blossomZ));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,3.0f,1.5f));
-    //blossomRightArmModelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
     glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.9});
     glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
@@ -827,10 +940,8 @@ void drawBlossomRightArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMt
 }
 
 void drawBlossomLeftArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //glm::mat4 blossomLeftArmModelMtx(1.0f);
     modelMtx = glm::translate(modelMtx, glm::vec3(blossomX+1.0f, blossomY+1.5f, blossomZ));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,3.0f,1.5f));
-    //blossomLeftArmModelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
     glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.9});
     glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
@@ -838,10 +949,8 @@ void drawBlossomLeftArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx
 }
 
 void drawBlossomRightLeg(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //glm::mat4 blossomRightLegModelMtx(1.0f);
     modelMtx = glm::translate(modelMtx, glm::vec3(blossomX-0.5f, blossomY, blossomZ));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,3.0f,1.5f));
-    //blossomRightLegModelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
     glm::vec3 bodyColor(glm::vec3{0.5,0.5,0.0});
     glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
@@ -849,10 +958,8 @@ void drawBlossomRightLeg(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMt
 }
 
 void drawBlossomLeftLeg(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //glm::mat4 blossomLeftLegModelMtx(1.0f);
     modelMtx = glm::translate(modelMtx, glm::vec3(blossomX+0.5f, blossomY, blossomZ));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,3.0f,1.5f));
-    //blossomLeftLegModelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
     glm::vec3 bodyColor(glm::vec3{0.5,0.5,0.0});
     glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
@@ -860,10 +967,8 @@ void drawBlossomLeftLeg(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx
 }
 
 void drawBlossomNose(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //glm::mat4 blossomNoseModelMtx(1.0f);
     modelMtx = glm::translate(modelMtx, glm::vec3(blossomX,blossomY+3.2f,blossomZ+0.5f));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,1.5f,1.5f));
-    //blossomNoseModelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
     glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.8});
     glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
@@ -872,7 +977,6 @@ void drawBlossomNose(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
 
 /// Draw Blossom
 void drawBlossom(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //glm::mat4 blossomModelMtx(1.0f);
     drawBlossomBody(modelMtx,viewMtx,projMtx);
     drawBlossomNeck(modelMtx,viewMtx,projMtx);
     drawBlossomRightArm(modelMtx,viewMtx,projMtx);
@@ -881,7 +985,6 @@ void drawBlossom(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     drawBlossomLeftLeg(modelMtx,viewMtx,projMtx);
     if(blossomMoving){
         modelMtx = glm::translate(modelMtx, glm::vec3(0.0f,-0.5f,0.0f));
-        //blossomModelMtx = transMtx * modelMtx;
         drawBlossomHead(modelMtx,viewMtx,projMtx);
         drawBlossomNose(modelMtx,viewMtx,projMtx);
     }
@@ -896,7 +999,6 @@ void drawJarrisonBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) 
     // translate and scale body
     modelMtx = glm::translate(modelMtx, glm::vec3(jarrisonX, jarrisonY, jarrisonZ));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.5f, 1.5f, 5.0f));
-    //modelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
     // set color to turquoise
     glm::vec3 bodyColor( glm::vec3{0.117, 0.898, 0.945});
@@ -909,7 +1011,6 @@ void drawJarrisonShell(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx)
     // translate and scale shell
     modelMtx = glm::translate(modelMtx, glm::vec3(jarrisonX, jarrisonY + 2.5, jarrisonZ - 1.0));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 3.0f, 3.0f));
-    //modelMtx = modelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
     // set color to pink
     glm::vec3 shellColor( glm::vec3{0.941, 0.576, 0.776});
@@ -925,7 +1026,6 @@ void drawJarrisonRightEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projM
     glm::mat4 eyeStemModelMtx = glm::translate(modelMtx, glm::vec3(currentEyeOffset, 0.0f, 0.0f));
     // translate eye stem
     eyeStemModelMtx = glm::translate(eyeStemModelMtx, glm::vec3(jarrisonX - 0.75f, jarrisonY, jarrisonZ + 2.3f));
-    //glm::mat4 eyeStemModelMtx = transMtx2 * transMtx * modelMtx;
     computeAndSendMatrixUniforms(eyeStemModelMtx, viewMtx, projMtx);
     // set eye stem color
     glm::vec3 leftEyeStemColor( glm::vec3{0.117, 0.898, 0.945});
@@ -935,7 +1035,6 @@ void drawJarrisonRightEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projM
     /// eyeball
     glm::mat4 eyeballModelMtx = glm::translate(modelMtx, glm::vec3(currentEyeOffset, 0.0f, 0.0f));
     eyeballModelMtx = glm::translate(eyeballModelMtx, glm::vec3(jarrisonX - 0.75f, jarrisonY + 4.0f, jarrisonZ + 2.3f));
-    //glm::mat4 eyeballModelMtx = transMtx3 * transMtx * modelMtx;
     computeAndSendMatrixUniforms(eyeballModelMtx, viewMtx, projMtx);
     // set color to white
     glm::vec3 eyeballColor( glm::vec3{1, 1, 1});
@@ -945,7 +1044,6 @@ void drawJarrisonRightEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projM
     /// pupil
     glm::mat4 pupilModelMtx = glm::translate(modelMtx, glm::vec3(currentEyeOffset, 0.0f, 0.0f));
     pupilModelMtx = glm::translate(pupilModelMtx, glm::vec3(jarrisonX - 0.75f, jarrisonY + 4.0f, jarrisonZ + 2.8f));
-    //glm::mat4 pupilModelMtx = transMtx4 * transMtx * modelMtx;
     computeAndSendMatrixUniforms(pupilModelMtx, viewMtx, projMtx);
     // set color to black
     glm::vec3 pupilColor( glm::vec3{0, 0, 0});
@@ -960,7 +1058,6 @@ void drawJarrisonLeftEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMt
     glm::mat4 eyeStemModelMtx = glm::translate(modelMtx, glm::vec3(-currentEyeOffset, 0.0f, 0.0f));
     // translate eye stem
     eyeStemModelMtx = glm::translate(eyeStemModelMtx, glm::vec3(jarrisonX + 0.75f, jarrisonY, jarrisonZ + 2.3f));
-    //glm::mat4 eyeStemModelMtx = transMtx2 * transMtx * modelMtx;
     computeAndSendMatrixUniforms(eyeStemModelMtx, viewMtx, projMtx);
     // set eye stem color
     glm::vec3 leftEyeStemColor( glm::vec3{0.117, 0.898, 0.945});
@@ -970,7 +1067,6 @@ void drawJarrisonLeftEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMt
     /// eyeball
     glm::mat4 eyeballModelMtx = glm::translate(modelMtx, glm::vec3(-currentEyeOffset, 0.0f, 0.0f));
     eyeballModelMtx = glm::translate(eyeballModelMtx, glm::vec3(jarrisonX + 0.75f, jarrisonY + 4.0f, jarrisonZ + 2.3f));
-    //glm::mat4 eyeballModelMtx = transMtx3 * transMtx * modelMtx;
     computeAndSendMatrixUniforms(eyeballModelMtx, viewMtx, projMtx);
     // set color to white
     glm::vec3 eyeballColor( glm::vec3{1, 1, 1});
@@ -980,7 +1076,6 @@ void drawJarrisonLeftEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMt
     /// pupil
     glm::mat4 pupilModelMtx = glm::translate(modelMtx, glm::vec3(-currentEyeOffset, 0.0f, 0.0f));
     pupilModelMtx = glm::translate(pupilModelMtx, glm::vec3(jarrisonX + 0.75f, jarrisonY + 4.0f, jarrisonZ + 2.8f));
-    //glm::mat4 pupilModelMtx = transMtx4 * transMtx * modelMtx;
     computeAndSendMatrixUniforms(pupilModelMtx, viewMtx, projMtx);
     // set color to black
     glm::vec3 pupilColor( glm::vec3{0, 0, 0});
@@ -993,7 +1088,6 @@ void drawJarrisonMouth(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx)
     // translate and scale mouth
     modelMtx = glm::translate(modelMtx, glm::vec3(jarrisonX, jarrisonY, jarrisonZ + 4.6));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 0.4f, 0.3f));
-    //modelMtx = transMtx * scaleMtx * modelMtx;
     computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
     // set color to black
     glm::vec3 mouthColor( glm::vec3{0, 0, 0});
@@ -1032,7 +1126,6 @@ void drawVoltorbRightEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMt
     rightEyeModelMtx = glm::translate( rightEyeModelMtx, glm::vec3( playerPos.x+4, playerPos.y+5, playerPos.z-4 ) );
     rightEyeModelMtx = glm::rotate(rightEyeModelMtx, 2.5f, glm::vec3(1.0f, 1.0f, 1.0f));
 
-    // rightEyeModelMtx = scaleMtx * transMtx3 * rotMtx * modelMtx;
     computeAndSendMatrixUniforms(rightEyeModelMtx, viewMtx, projMtx);
 
     CSCI441::drawSolidCone(2.0f, 4.0f, 1, 3);
@@ -1055,8 +1148,6 @@ void drawVoltorbLeftEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx
     leftEyeModelMtx = glm::rotate(leftEyeModelMtx, 2.7f, glm::vec3(1.0f, 0.0f, 0.0f));
     leftEyeModelMtx = glm::rotate(leftEyeModelMtx, 6.8f, glm::vec3(0.0f, 0.0f, 1.0f));
 
-    // leftEyeModelMtx = scaleMtx * transMtx4 * rotMtx * rotMtx2 * rotMtx3 * modelMtx;
-
     computeAndSendMatrixUniforms(leftEyeModelMtx, viewMtx, projMtx);
 
     CSCI441::drawSolidCone(2.0f, 4.0f, 1, 3);
@@ -1066,8 +1157,6 @@ void drawVoltorbLeftPupil(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projM
 
     leftPupilModelMtx = glm::scale(modelMtx, glm::vec3(0.2, 0.4, 0.2) );
     leftPupilModelMtx = glm::translate( leftPupilModelMtx, glm::vec3( playerPos.x+9, playerPos.y+6, playerPos.z+6 ) );
-
-    // leftPupilModelMtx = scaleMtx * transMtx6 * modelMtx;
 
     computeAndSendMatrixUniforms(leftPupilModelMtx, viewMtx, projMtx);
 
@@ -1083,8 +1172,6 @@ void drawVoltorbRightPupil(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 proj
     rightPupilModelMtx = glm::scale(modelMtx, glm::vec3(0.2, 0.4, 0.2) );
     rightPupilModelMtx = glm::translate( rightPupilModelMtx, glm::vec3( playerPos.x+9, playerPos.y+6, playerPos.z-6 ) );
 
-    // rightPupilModelMtx = scaleMtx * transMtx5 * modelMtx;
-
     computeAndSendMatrixUniforms(rightPupilModelMtx, viewMtx, projMtx);
 
     CSCI441::drawSolidSphere(1.0f, 10, 10);
@@ -1096,19 +1183,8 @@ void drawVoltorbBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     //make sure to include the file C:\MinGW\include\CSCI441\Vlad_A2\include\CSCI441\objects.hpp
     topHemisphereModelMtx = glm::translate( modelMtx, glm::vec3( playerPos.x, playerPos.y, playerPos.z ) );
 
-    // topHemisphereModelMtx = transMtx * modelMtx;
-
     computeAndSendMatrixUniforms(topHemisphereModelMtx, viewMtx, projMtx);
 
-    /*glm::vec3 bodyColor( glm::vec3{1.0f, 0.0f, 0.0f});
-    glUniform3fv(lightingShaderUniforms.materialColor, 1, &bodyColor[0]);
-
-    CSCI441::drawSolidTopHemisphere(2.0f, 20, 20); //use a custom shape to draw the top of the sphere
-
-    glm::vec3 bodyColor2( glm::vec3{1.0f,1.0f,1.0f});
-    glUniform3fv(lightingShaderUniforms.materialColor, 1, &bodyColor2[0]);
-
-    CSCI441::drawSolidBottomHemisphere(2.0f, 20, 20);*///use a custom shape to draw the bottom of the sphere
 }
 void drawVoltorb(glm::mat4 modelMtx,glm::mat4 viewMtx,glm::mat4 projectMtx){
     // voltorb body
@@ -1124,6 +1200,61 @@ void drawVoltorb(glm::mat4 modelMtx,glm::mat4 viewMtx,glm::mat4 projectMtx){
     drawVoltorbLeftPupil(modelMtx, viewMtx, projectMtx);
 }
 
+void drawTreeTopper(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(-35.0f, 45.0f, -25.0f));
+    computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
+    glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
+    CSCI441::drawSolidSphere(5.0f, 10, 10);
+}
+
+void drawRedOrnamentTop(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(0.3f, 9.8f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 1.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{0.5,0.5,0.5});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawRedOrnamentSphere(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(0.3f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 1.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+void drawRedOrnament(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    drawRedOrnamentTop(modelMtx,viewMtx,projMtx);
+    drawRedOrnamentSphere(modelMtx,viewMtx,projMtx);
+}
+
+void drawGreenOrnamentTop(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(0.3f, 9.8f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 1.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{1.5,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawGreenOrnamentSphere(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    modelMtx = glm::translate(modelMtx, glm::vec3(0.3f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 1.0f, 1.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{0.0,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+void drawGreenOrnament(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    drawGreenOrnamentTop(modelMtx,viewMtx,projMtx);
+    drawGreenOrnamentSphere(modelMtx,viewMtx,projMtx);
+}
+
+void transposeFlake(glm::vec3 landingPosition, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    // TODO transpose flake
+}
+
 
 // renderScene() ///////////////////////////////////////////////////////////////
 void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -1133,9 +1264,6 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     //// BEGIN DRAWING THE GROUND PLANE ////
     // draw the ground plane
-/*
-    glm::mat4 groundModelMtx = glm::scale( glm::mat4(1.0f), glm::vec3(55.0f, 1.0f, 55.0f));
-*/
     glm::mat4 groundModelMtx = glm::scale( glm::mat4(1.0f), glm::vec3(80.0f,1.0f,80.0f));
     computeAndSendMatrixUniforms(groundModelMtx, viewMtx, projMtx);
 
@@ -1190,14 +1318,6 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /////////////////////////////////////////////////////// bottom //////////////////////////////////////////////////////////////
-    /*computeAndSendTransformationMatrices6(glm::mat4(1.0f), viewMtx, projMtx, texShaderProgramUniforms.mvpMatrix);
-    glBindTexture(GL_TEXTURE_2D,bottomTextureHandle);
-
-    glBindVertexArray( bottomVAO );
-    glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );*/
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     lightingShader->useProgram();
 
     // TODO Evil Santa
@@ -1205,6 +1325,13 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     glm::mat4 santaModelMtx(1.0f);
     santaModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(santaX,0.0f,santaZ));
     drawEvilSanta(santaModelMtx, viewMtx, projMtx);
+
+    glm::mat4 redOrnamentModelMtx(1.0f);
+    glm::mat4 greenOrnamentModelMtx(1.0f);
+    drawRedOrnament(redOrnamentModelMtx, viewMtx, projMtx);
+
+    greenOrnamentModelMtx = glm::translate(greenOrnamentModelMtx, glm::vec3(0.3f, 13.0f, 10.0f));
+    drawGreenOrnament(greenOrnamentModelMtx, viewMtx, projMtx);
 
     /// draw jarrison
     glm::mat4 jarrisonModelMtx(1.0f);
@@ -1226,13 +1353,6 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     drawBlossomModelMtx = glm::translate(drawBlossomModelMtx, glm::vec3(-blossomX,0.0f,-blossomZ));
     /// drawBlossom(drawBlossomModelMtx,viewMtx,projMtx);
 
-    /// draw trees and bushes
-    /*for( Trees t : trees ) {
-        drawTree(t, viewMtx, projMtx);
-    }*/
-    /*for (Bushes b: bushes) {
-        drawBush(b, viewMtx, projMtx);
-    }*/
     // TODO Christmas Tree
     drawChristmasTree(christmasTree, viewMtx, projMtx);
     drawChristmasTreeTrunk(christmasTrunk, viewMtx, projMtx);
@@ -1242,15 +1362,17 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
         drawCandyCane(c , viewMtx, projMtx);
     }
 
+    candleShader->useProgram();
+    glUniform3fv(candleShaderUniforms.camPos,1,&camPos[0]);
+    glm::mat4 candleModelMtx = glm::mat4(1.0f);
+    drawCandles(candleModelMtx,viewMtx,projMtx);
+
+    lightingShader->useProgram();
+
     glm::mat4 modelMatrix = glm::mat4( 1.0f );
 
     // LOOKHERE #3
-
     billboardShaderProgram->useProgram();
-
-//    modelMatrix = glm::rotate(glm::mat4(1.0f), snowglobeAngle, CSCI441::Y_AXIS);
-//    modelMatrix = glm::rotate(glm::mat4(1.0f), 2.0f, glm::vec3(1.0,2.0f,1.0));
-    // modelMatrix = glm::translate(glm::mat4(1.0f), gravity);
 
     computeAndSendTransformationMatrices5( modelMatrix, viewMtx, projMtx,
                                           billboardShaderProgramUniforms.mvMatrix, billboardShaderProgramUniforms.projMatrix);
@@ -1259,19 +1381,19 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     glBindTexture(GL_TEXTURE_2D, spriteTextureHandle);
 
     // TODO #1
-
-
     for(int i = 0; i < NUM_SPRITES; i++){
-        glm::vec3 currentSprite = spriteLocations[ spriteIndices[i] ];
-//        cout << currentSprite.y << endl;
 
         if(spriteLocations[ spriteIndices[i]].y <= 0){
+            // TODO transpose flake
+            glm::vec3 landingPosition = spriteLocations[ spriteIndices[i]];
+            transposeFlake(landingPosition, viewMtx, projMtx);
             spriteLocations[ spriteIndices[i]].y += MAX_BOX_SIZE;
+            // TODO move flake a lil'
         }
         else {
             spriteLocations[ spriteIndices[i]].y -= 0.05;
         }
-//        cout << spriteLocations[ spriteIndices[i] ].y << endl;
+        glm::vec3 currentSprite = spriteLocations[ spriteIndices[i] ];
         glm::vec4 p = modelMatrix * glm::vec4(currentSprite, 1.0f);
         glm::vec4 eyePoints = p - glm::vec4(camPos, 1.0f);
         float dist = dot(glm::vec4(arcballLookAtPoint - camPos,1), eyePoints);
@@ -1309,6 +1431,9 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(GLushort) * NUM_SPRITES, spriteIndices);
 
     glDrawElements( GL_POINTS, NUM_SPRITES, GL_UNSIGNED_SHORT, (void*)0 );
+
+    treeTopperShaderProgram->useProgram();
+    drawTreeTopper(modelMatrix, viewMtx, projMtx);
 
     lightingShader->useProgram();
 }
@@ -1431,6 +1556,29 @@ void setupShaders() {
     texShaderProgramAttributes.vPos = texShaderProgram->getAttributeLocation("vPos");
     texShaderProgramAttributes.vTexCoord = texShaderProgram->getAttributeLocation("vTexCoord");
     glUniform1i(texShaderProgramUniforms.textureMap,0);
+
+    treeTopperShaderProgram = new CSCI441::ShaderProgram("shaders/treeTopper.v.glsl", "shaders/treeTopper.f.glsl");
+    treeTopperShaderProgramUniforms.mvpMatrix = treeTopperShaderProgram->getUniformLocation("mvpMatrix");
+    treeTopperShaderProgramUniforms.topperColor = treeTopperShaderProgram->getUniformLocation("topperColor");
+    treeTopperShaderProgramAttributes.vPos = treeTopperShaderProgram->getAttributeLocation("vPos");
+
+    candleShader = new CSCI441::ShaderProgram("shaders/candleShader.v.glsl", "shaders/candleShader.f.glsl");
+    candleShaderUniforms.mvpMatrix = candleShader->getUniformLocation("mvpMtx");
+    candleShaderUniforms.normalMtx = candleShader->getUniformLocation("normalMtx");
+/*
+    candleShaderUniforms.modelMtx = candleShader->getUniformLocation("modelMtx");
+*/
+
+    candleShaderUniforms.lightPositionPoint = candleShader->getUniformLocation("lightPositionPoint");
+    candleShaderUniforms.lightColorPoint = candleShader->getUniformLocation("lightColorPoint");
+    candleShaderUniforms.lightDirection = candleShader->getUniformLocation("lightDirection");
+
+    candleShaderUniforms.materialColor  = candleShader->getUniformLocation("materialColor");
+    candleShaderUniforms.camPos = candleShader->getUniformLocation("camPos");
+
+
+    candleShaderAttributes.vPos = candleShader->getAttributeLocation("vPos");
+    candleShaderAttributes.vNormal = candleShader->getAttributeLocation("vNormal");
 }
 
 void setupBuffers() {
@@ -1443,52 +1591,56 @@ void setupBuffers() {
 
     VertexNormal groundQuad[4] = {
             {-1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f},
-            { 1.0f, 0.0f, -1.0f,0.0f, 1.0f, 0.0f},
-            {-1.0f, 0.0f,  1.0f,0.0f, 1.0f, 0.0f},
-            { 1.0f, 0.0f,  1.0f,0.0f, 1.0f, 0.0f}
+            {1.0f,  0.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+            {-1.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f},
+            {1.0f,  0.0f, 1.0f,  0.0f, 1.0f, 0.0f}
     };
 
-    GLushort indices[4] = {0,1,2,3};
+    GLushort indices[4] = {0, 1, 2, 3};
 
     /// sprite
-    glGenVertexArrays( NUM_VAOS, vaos );
-    glGenBuffers( NUM_VAOS, vbos );
-    glGenBuffers( NUM_VAOS, ibos );
+    glGenVertexArrays(NUM_VAOS, vaos);
+    glGenBuffers(NUM_VAOS, vbos);
+    glGenBuffers(NUM_VAOS, ibos);
 
     // --------------------------------------------------------------------------------------------------
     // LOOKHERE #2 - generate sprites
 
-    spriteLocations = (glm::vec3*)malloc(sizeof(glm::vec3) * NUM_SPRITES);
-    spriteIndices = (GLushort*)malloc(sizeof(GLushort) * NUM_SPRITES);
-    distances = (GLfloat*)malloc(sizeof(GLfloat) * NUM_SPRITES);
-    for( int i = 0; i < NUM_SPRITES; i++ ) {
-        glm::vec3 pos( randNumber(MAX_BOX_SIZE), randNumber(NEW_BOX_SIZE), randNumber(MAX_BOX_SIZE) );
+    spriteLocations = (glm::vec3 *) malloc(sizeof(glm::vec3) * NUM_SPRITES);
+    spriteIndices = (GLushort *) malloc(sizeof(GLushort) * NUM_SPRITES);
+    distances = (GLfloat *) malloc(sizeof(GLfloat) * NUM_SPRITES);
+    for (int i = 0; i < NUM_SPRITES; i++) {
+        glm::vec3 pos(randNumber(MAX_BOX_SIZE), randNumber(NEW_BOX_SIZE), randNumber(MAX_BOX_SIZE));
         spriteLocations[i] = pos;
         spriteIndices[i] = i;
-
-//        if(spriteLocations[i].y <= 0){
-//            spriteLocations[i].y = randNumber(NEW_BOX_SIZE);
-//        }
-//        cout << spriteLocations[i].y << endl;
-
-        //not quite working right
-
-//        cout << pos.y << endl;
     }
 
-    glBindVertexArray( vaos[VAOS.PARTICLE_SYSTEM] );
+    glBindVertexArray(vaos[VAOS.PARTICLE_SYSTEM]);
 
-    glBindBuffer( GL_ARRAY_BUFFER, vbos[VAOS.PARTICLE_SYSTEM] );
-    glBufferData( GL_ARRAY_BUFFER, NUM_SPRITES * sizeof(glm::vec3), spriteLocations, GL_STATIC_DRAW );
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[VAOS.PARTICLE_SYSTEM]);
+    glBufferData(GL_ARRAY_BUFFER, NUM_SPRITES * sizeof(glm::vec3), spriteLocations, GL_STATIC_DRAW);
 
-    glEnableVertexAttribArray( billboardShaderProgramAttributes.vPos );
-    glVertexAttribPointer( billboardShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0 );
+    glEnableVertexAttribArray(billboardShaderProgramAttributes.vPos);
+    glVertexAttribPointer(billboardShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
 
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibos[VAOS.PARTICLE_SYSTEM] );
-    glBufferData( GL_ELEMENT_ARRAY_BUFFER, NUM_SPRITES * sizeof(GLushort), spriteIndices, GL_STATIC_DRAW );
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibos[VAOS.PARTICLE_SYSTEM]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, NUM_SPRITES * sizeof(GLushort), spriteIndices, GL_STATIC_DRAW);
 
-    fprintf( stdout, "[INFO]: point sprites read in with VAO/VBO/IBO %d/%d/%d\n", vaos[VAOS.PARTICLE_SYSTEM], vbos[VAOS.PARTICLE_SYSTEM], ibos[VAOS.PARTICLE_SYSTEM] );
+    fprintf(stdout, "[INFO]: point sprites read in with VAO/VBO/IBO %d/%d/%d\n", vaos[VAOS.PARTICLE_SYSTEM],
+            vbos[VAOS.PARTICLE_SYSTEM], ibos[VAOS.PARTICLE_SYSTEM]);
     /// end sprite
+
+    ////////////////////////////////////
+    glEnableVertexAttribArray(candleShaderAttributes.vPos);
+    glVertexAttribPointer(candleShaderAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void*)0);
+
+    glEnableVertexAttribArray(candleShaderAttributes.vNormal);
+    glVertexAttribPointer(candleShaderAttributes.vNormal, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
+    /////////////////////////////////
+
+    /// send tree topper vPos
+    glEnableVertexAttribArray(treeTopperShaderProgramAttributes.vPos);
+    glVertexAttribPointer(treeTopperShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
 
     glGenVertexArrays(1, &groundVAO);
     glBindVertexArray(groundVAO);
@@ -1499,10 +1651,11 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(groundQuad), groundQuad, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(lightingShaderAttributes.vPos);
-    glVertexAttribPointer(lightingShaderAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void*)0);
+    glVertexAttribPointer(lightingShaderAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void *) 0);
 
     glEnableVertexAttribArray(lightingShaderAttributes.vertexNormal);
-    glVertexAttribPointer(lightingShaderAttributes.vertexNormal, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void*)(3*sizeof(float)));
+    glVertexAttribPointer(lightingShaderAttributes.vertexNormal, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal),
+                          (void *) (3 * sizeof(float)));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbods[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -1510,19 +1663,19 @@ void setupBuffers() {
     ////////////////////////////////////////////////// left plane /////////////////////////////////////////////////////
 
     struct VertexTextured { /// struct for drawing each plane of our skybox
-        float x,y,z;
-        float s,t;
+        float x, y, z;
+        float s, t;
     };
 
     VertexTextured leftTexVertices[4] = {
-            {quadSize, 0.0f,-quadSize,0.0f,0.0f},
-            {quadSize,0.0f ,quadSize,1.0f,0.0f},
-            {quadSize,quadSize,-quadSize,0.0f,1.0f},
-            {quadSize,quadSize,quadSize,1.0f,1.0f}
+            {quadSize, 0.0f,     -quadSize, 0.0f, 0.0f},
+            {quadSize, 0.0f,     quadSize,  1.0f, 0.0f},
+            {quadSize, quadSize, -quadSize, 0.0f, 1.0f},
+            {quadSize, quadSize, quadSize,  1.0f, 1.0f}
     };
-    unsigned short leftTexIndices[4] = {0,1,2,3};
+    unsigned short leftTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&leftVAO);
+    glGenVertexArrays(1, &leftVAO);
     glBindVertexArray(leftVAO);
 
     glGenBuffers(2, leftVBO);
@@ -1531,10 +1684,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(leftTexVertices), leftTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, leftVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(leftTexIndices), leftTexIndices, GL_STATIC_DRAW);
@@ -1544,14 +1699,14 @@ void setupBuffers() {
 
     ////////////////////////////////////////////////// right plane /////////////////////////////////////////////////////
     VertexTextured rightTexVertices[4] = {
-            {-quadSize, 0.0f,quadSize,0.0f,0.0f},
-            {-quadSize,0.0f ,-quadSize,1.0f,0.0f},
-            {-quadSize,quadSize,quadSize,0.0f,1.0f},
-            {-quadSize,quadSize,-quadSize,1.0f,1.0f}
+            {-quadSize, 0.0f,     quadSize,  0.0f, 0.0f},
+            {-quadSize, 0.0f,     -quadSize, 1.0f, 0.0f},
+            {-quadSize, quadSize, quadSize,  0.0f, 1.0f},
+            {-quadSize, quadSize, -quadSize, 1.0f, 1.0f}
     };
-    unsigned short rightTexIndices[4] = {0,1,2,3};
+    unsigned short rightTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&rightVAO);
+    glGenVertexArrays(1, &rightVAO);
     glBindVertexArray(rightVAO);
 
     glGenBuffers(2, rightVBO);
@@ -1560,10 +1715,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(rightTexVertices), rightTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rightVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rightTexIndices), rightTexIndices, GL_STATIC_DRAW);
@@ -1573,14 +1730,14 @@ void setupBuffers() {
 
     ////////////////////////////////////////////////// back plane /////////////////////////////////////////////////////
     VertexTextured backTexVertices[4] = {
-            {-quadSize,0.0f ,-quadSize,0.0f,0.0f},
-            {quadSize, 0.0f,-quadSize,1.0f,0.0f},
-            {-quadSize,quadSize,-quadSize,0.0f,1.0f},
-            {quadSize,quadSize,-quadSize,1.0f,1.0f}
+            {-quadSize, 0.0f,     -quadSize, 0.0f, 0.0f},
+            {quadSize,  0.0f,     -quadSize, 1.0f, 0.0f},
+            {-quadSize, quadSize, -quadSize, 0.0f, 1.0f},
+            {quadSize,  quadSize, -quadSize, 1.0f, 1.0f}
     };
-    unsigned short backTexIndices[4] = {0,1,2,3};
+    unsigned short backTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&backVAO);
+    glGenVertexArrays(1, &backVAO);
     glBindVertexArray(backVAO);
 
     glGenBuffers(2, backVBO);
@@ -1589,10 +1746,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(backTexVertices), backTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, backVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(backTexIndices), backTexIndices, GL_STATIC_DRAW);
@@ -1602,14 +1761,14 @@ void setupBuffers() {
 
     ////////////////////////////////////////////////// front plane /////////////////////////////////////////////////////
     VertexTextured frontTexVertices[4] = {
-            {quadSize,0.0f ,quadSize,0.0f,0.0f},
-            {-quadSize, 0.0f,quadSize,1.0f,0.0f},
-            {quadSize,quadSize,quadSize,0.0f,1.0f},
-            {-quadSize,quadSize,quadSize,1.0f,1.0f}
+            {quadSize,  0.0f,     quadSize, 0.0f, 0.0f},
+            {-quadSize, 0.0f,     quadSize, 1.0f, 0.0f},
+            {quadSize,  quadSize, quadSize, 0.0f, 1.0f},
+            {-quadSize, quadSize, quadSize, 1.0f, 1.0f}
     };
-    unsigned short frontTexIndices[4] = {0,1,2,3};
+    unsigned short frontTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&frontVAO);
+    glGenVertexArrays(1, &frontVAO);
     glBindVertexArray(frontVAO);
 
     glGenBuffers(2, frontVBO);
@@ -1618,10 +1777,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(frontTexVertices), frontTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, frontVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(frontTexIndices), frontTexIndices, GL_STATIC_DRAW);
@@ -1631,14 +1792,14 @@ void setupBuffers() {
 
     ////////////////////////////////////////////////// top plane /////////////////////////////////////////////////////
     VertexTextured topTexVertices[4] = {
-            {quadSize,quadSize,-quadSize,0.0f,1.0f},
-            {-quadSize,quadSize,-quadSize,1.0f,1.0f},
-            {quadSize,quadSize,quadSize,0.0f,0.0f},
-            {-quadSize,quadSize,quadSize,1.0f,0.0f}
+            {quadSize,  quadSize, -quadSize, 0.0f, 1.0f},
+            {-quadSize, quadSize, -quadSize, 1.0f, 1.0f},
+            {quadSize,  quadSize, quadSize,  0.0f, 0.0f},
+            {-quadSize, quadSize, quadSize,  1.0f, 0.0f}
     };
-    unsigned short topTexIndices[4] = {0,1,2,3};
+    unsigned short topTexIndices[4] = {0, 1, 2, 3};
 
-    glGenVertexArrays(1,&topVAO);
+    glGenVertexArrays(1, &topVAO);
     glBindVertexArray(topVAO);
 
     glGenBuffers(2, topVBO);
@@ -1647,10 +1808,12 @@ void setupBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(topTexVertices), topTexVertices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
+    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) 0);
 
     glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
+    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured),
+                          (void *) (sizeof(float) * 3));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, topVBO[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(topTexIndices), topTexIndices, GL_STATIC_DRAW);
@@ -1658,34 +1821,6 @@ void setupBuffers() {
     fprintf(stdout, "[INFO]: platform read in with VAO %d\n", topVAO);
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    ////////////////////////////////////////////////// bottom plane /////////////////////////////////////////////////////
-    /*VertexTextured bottomTexVertices[4] = {
-            {55.0f,0.0f,-55.0f,0.0f,1.0f},
-            {-55.0f,0.0f,-55.0f,1.0f,1.0f},
-            {55.0f,0.0f,55.0f,0.0f,0.0f},
-            {-55.0f,0.0f,55.0f,1.0f,0.0f}
-    };
-    unsigned short bottomTexIndices[4] = {0,1,2,3};
-
-    glGenVertexArrays(1,&bottomVAO);
-    glBindVertexArray(bottomVAO);
-
-    glGenBuffers(2, bottomVBO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, bottomVBO[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(bottomTexVertices), bottomTexVertices, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(texShaderProgramAttributes.vPos);
-    glVertexAttribPointer(texShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*) 0);
-
-    glEnableVertexAttribArray(texShaderProgramAttributes.vTexCoord);
-    glVertexAttribPointer(texShaderProgramAttributes.vTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(sizeof(float)* 3));
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bottomVBO[1]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(bottomTexIndices), bottomTexIndices, GL_STATIC_DRAW);
-
-    fprintf(stdout, "[INFO]: platform read in with VAO %d\n", bottomVAO);*/
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
 void setupOpenGL() {
@@ -1707,6 +1842,23 @@ void setupOpenGL() {
     glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );	// set the clear color to black
 }
 
+void setTreeTopperColor(glm::vec3 &color) {
+    if (getRand() < 0.5) color.r += 0.01;
+    else color.r -= 0.01;
+    if (color.r > 1.0f) color.r = 1.0f;
+    if (color.r < 0.0f) color.r = 0.0f;
+
+    if (getRand() < 0.5) color.b += 0.01;
+    else color.b -= 0.01;
+    if (color.b > 1.0f) color.b = 1.0f;
+    if (color.b < 0.0f) color.b = 0.0f;
+
+    if (getRand() < 0.5) color.g += 0.01;
+    else color.g -= 0.01;
+    if (color.g > 1.0f) color.g = 1.0f;
+    if (color.g < 0.0f) color.g = 0.0f;
+}
+
 void setupScene() {
     // give the camera a scenic starting point.
     camPos.x = 60;
@@ -1724,7 +1876,7 @@ void setupScene() {
     playerMove.z = 0;
 
     float light_cutoff = glm::radians(0.785f);
-
+    //glUniform1f(candleShaderUniforms.cutoffSpotLight, light_cutoff);
 
     // configure arcball camera
     cameraTheta = M_PI / 3.0;
@@ -1738,11 +1890,17 @@ void setupScene() {
     srand(time(nullptr));    // seed our random number generator
     generateEnvironment();
 
+    treeTopperShaderProgram->useProgram();
+    // send tree topper color data
+
+    topperColor = glm::vec3(0.5, 0.5, 0.5);
+    glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
+
     lightingShader->useProgram();           // use our lighting shader program so when
     // assign uniforms, they get sent to this shader
 
     // TODO #4 set the light direction and color
-    glm::vec3 lightDirection = glm::vec3(-1, -1, -1);
+    glm::vec3 lightDirection = glm::vec3(-1, -1, 1);
     glm::vec3 lightColor = glm::vec3(1, 1, 1);
     glm::vec3 pointLightColor = glm::vec3(1, 1,1);
     // for point light
@@ -1765,21 +1923,33 @@ void setupScene() {
     glUniform3fv(lightingShaderUniforms.spotLightPosition, 1, &spotLightPosition[0]);
     glUniform3fv(lightingShaderUniforms.spotLightDirection, 1, &spotLightDirection[0]);
     glUniform3fv(lightingShaderUniforms.spotLightColor, 1, &spotLightColor[0]);
+
+    /////////////////////////////////////////////
+    candleShader->useProgram();
+
+    //glm::vec3 lightPoint = glm::vec3(-55.0, 5.0, -55.0);
+    glm::vec3 candleLightPos = glm::vec3(10.0,9.0,10.0);
+    glm::vec3 candleLightColor = glm::vec3(0,0,1);
+    glm::vec3 candleLightDirection = glm::vec3(0,1,0);
+
+    /*glm::vec3 lightVec = glm::vec3(-1.0, -1.0, -1.0);
+    glm::vec3 lightVecColr = glm::vec3(.1, .1, 1);*/
+
+    glUniform3fv(candleShaderUniforms.lightPositionPoint, 1, &candleLightPos[0]);
+    glUniform3fv(candleShaderUniforms.lightColorPoint, 1, &candleLightColor[0]);
+    //glUniform3fv(candleShaderUniforms.camPos, 1, &camPos[0]);
+    glUniform3fv(candleShaderUniforms.lightDirection, 1, &candleLightDirection[0]);
+
+    lightingShader->useProgram();
 }
 
 void updateScene() {
-    /*snowglobeAngle += 0.01f;
-    if(snowglobeAngle >= 6.28f) {
-        snowglobeAngle -= 6.28f;
-    }*/
-//    float yChange = -0.05;
-//    gravity.y += yChange;
+    setTreeTopperColor(topperColor);
 }
 
 void setupTextures() {
     // LOOKHERE #4
     spriteTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/snowflake.png");
-
     /// loading in the files for each plane's texture
     rightTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/posx.jpg");
     leftTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/negx.jpg");
@@ -1819,6 +1989,7 @@ int main() {
     printf("\tCtrl and Left Click and move mouse - Zoom arcball cam\n");
     printf("\t2 - Toggle first person camera window\n");
     printf("\tQ / ESC - Quit program\n");
+
 
     //  This is our draw loop - all rendering is done here.  We use a loop to keep the window open
     //	until the user decides to close the window and quit the program.  Without a loop, the
@@ -1878,7 +2049,6 @@ int main() {
         glfwSwapBuffers(window);                        // flush the OpenGL commands and make sure they get rendered!
         glfwPollEvents();				                // check for any events and signal to redraw screen
 
-        // jarrison constant animation
         updateJarrisonAnimation();
         updateSantaDirection();
 
