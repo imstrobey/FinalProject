@@ -147,6 +147,7 @@ struct LightingShaderUniforms {         // stores the locations of all of our sh
     GLint spotLightPosition;
     GLint spotLightDirection;
     GLint spotLightColor;
+    //GLint attenuationChange;//rREMOVE
 } lightingShaderUniforms;
 struct LightingShaderAttributes {       // stores the locations of all of our shader attributes
     // TODO #2 add variables to store the new attributes that were created
@@ -164,7 +165,7 @@ struct CandleShaderUniforms {
     GLint lightDirection;
     GLint materialColor;
     GLint camPos;
-    GLint attenuationChange;
+    //GLint attenuationChange;
 
 } candleShaderUniforms;
 struct CandleShaderAttributes {
@@ -386,20 +387,20 @@ static void keyboard_callback( GLFWwindow *window, int key, int scancode, int ac
             case GLFW_KEY_W: // move jarrison forward
                 jarrisonZ += cos(jarrisonRadians) * MOVEMENT_CONSTANT;
                 jarrisonX += sin(jarrisonRadians) * MOVEMENT_CONSTANT;
-                if (jarrisonZ > MAX_POS) jarrisonZ = MAX_POS - 0.01;
-                if (jarrisonX > MAX_POS) jarrisonX = MAX_POS - 0.01;
-                if (jarrisonZ < -MAX_POS) jarrisonZ = -MAX_POS + 0.01;
-                if (jarrisonX < -MAX_POS) jarrisonX = -MAX_POS + 0.01;
+                if (jarrisonZ > quadSize) jarrisonZ = quadSize - 0.01;
+                if (jarrisonX > quadSize) jarrisonX = quadSize - 0.01;
+                if (jarrisonZ < -quadSize) jarrisonZ = -quadSize + 0.01;
+                if (jarrisonX < -quadSize) jarrisonX = -quadSize + 0.01;
                 camPos0 += glm::vec3{sin(jarrisonRadians) * MOVEMENT_CONSTANT, 0.0f, cos(jarrisonRadians) * MOVEMENT_CONSTANT};
                 jarrisonMoving = true;
                 break;
             case GLFW_KEY_S: // move jarrison backward
                 jarrisonZ -= cos(jarrisonRadians) * MOVEMENT_CONSTANT;
                 jarrisonX -= sin(jarrisonRadians) * MOVEMENT_CONSTANT;
-                if (jarrisonZ > MAX_POS) jarrisonZ = MAX_POS - 0.01;
-                if (jarrisonX > MAX_POS) jarrisonX = MAX_POS - 0.01;
-                if (jarrisonZ < -MAX_POS) jarrisonZ = -MAX_POS + 0.01;
-                if (jarrisonX < -MAX_POS) jarrisonX = -MAX_POS + 0.01;
+                if (jarrisonZ > quadSize) jarrisonZ = quadSize - 0.01;
+                if (jarrisonX > quadSize) jarrisonX = quadSize - 0.01;
+                if (jarrisonZ < -quadSize) jarrisonZ = -quadSize + 0.01;
+                if (jarrisonX < -quadSize) jarrisonX = -quadSize + 0.01;
                 camPos0 += glm::vec3{sin(jarrisonRadians) * MOVEMENT_CONSTANT, 0.0f, cos(jarrisonRadians) * MOVEMENT_CONSTANT};
                 jarrisonMoving = true;
                 break;
@@ -1310,7 +1311,7 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     //// BEGIN DRAWING THE GROUND PLANE ////
     // draw the ground plane
-    glm::mat4 groundModelMtx = glm::scale( glm::mat4(1.0f), glm::vec3(80.0f,1.0f,80.0f));
+    glm::mat4 groundModelMtx = glm::scale( glm::mat4(1.0f), glm::vec3(quadSize,1.0f,quadSize));
     computeAndSendMatrixUniforms(groundModelMtx, viewMtx, projMtx);
 
     glm::vec3 groundColor(1.0f,1.0f,1.0f);
@@ -1521,6 +1522,8 @@ void updateJarrisonAnimation() {
         }
     }
 }
+
+/*
 int attenuationCounter = 0;
 int attenuationIncrement = 1;
 float linearValues[12] = {0.7f, 0.35f, 0.22f, 0.14f, 0.09f, 0.07f, 0.045f, 0.027f, 0.022f, 0.014f, 0.007f, 0.0014f};
@@ -1534,14 +1537,16 @@ void updateCandleAttenuation(){
 
 
         glUniform3fv(candleShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
+        glUniform3fv(lightingShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
     }else{
         glm::vec3 newAttenuation = glm::vec3{1.0f,linearValues[attenuationCounter],quadraticValues[attenuationCounter]};
         glUniform3fv(candleShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
+        glUniform3fv(lightingShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
     }
 
     attenuationCounter += attenuationIncrement;
 }
-
+*/
 void updateSantaDirection(){
     if(santaMoveRight){
         if (santaX < 65){
@@ -1645,6 +1650,7 @@ void setupShaders() {
     lightingShaderAttributes.vPos         = lightingShader->getAttributeLocation("vPos");
     lightingShaderAttributes.vertexNormal = lightingShader->getAttributeLocation("vertexNormal");
     lightingShaderUniforms.camPosition         = lightingShader->getUniformLocation("camPosition");
+    //lightingShaderUniforms.attenuationChange         = lightingShader->getUniformLocation("attenuationChange");//remove
 
     lightingShaderUniforms.spotLightTheta   = lightingShader->getUniformLocation("spotLightTheta");
     lightingShaderUniforms.spotLightPosition = lightingShader->getUniformLocation("spotLightPosition");
@@ -1685,7 +1691,7 @@ void setupShaders() {
     candleShaderUniforms.lightDirection = candleShader->getUniformLocation("lightDirection");
     candleShaderUniforms.materialColor  = candleShader->getUniformLocation("materialColor");
     candleShaderUniforms.camPos = candleShader->getUniformLocation("camPos");
-    candleShaderUniforms.attenuationChange = candleShader->getUniformLocation("attenuationChange");
+    //candleShaderUniforms.attenuationChange = candleShader->getUniformLocation("attenuationChange");
 
     candleShaderAttributes.vPos = candleShader->getAttributeLocation("vPos");
     candleShaderAttributes.vNormal = candleShader->getAttributeLocation("vNormal");
@@ -2015,12 +2021,16 @@ void setupScene() {
     glm::vec3 lightColor = glm::vec3(1, 1, 1);
     glm::vec3 pointLightColor = glm::vec3(0, 0,1);
     // for point light
-    glm::vec3 lightPosition = glm::vec3(1, 1, 0);
+    glm::vec3 lightPosition = glm::vec3(rand() % 10, rand() % 10, 0);
     glUniform3fv(lightingShaderUniforms.lightPosition, 1, &lightPosition[0]);
 
     glUniform3fv(lightingShaderUniforms.lightDirection, 1, &lightDirection[0]);
     glUniform3fv(lightingShaderUniforms.lightColor, 1, &lightColor[0]);
     glUniform3fv(lightingShaderUniforms.pointLightColor, 1, &pointLightColor[0]);
+
+    //glm::vec3 attenuationChange = glm::vec3(1.0f, 0.14f, 0.007f);//remove
+
+    //glUniform3fv(lightingShaderUniforms.attenuationChange, 1, &lightPosition[0]);//remove
 
     // SPOT LIGHT VARIABLES
     // for spot light
@@ -2042,13 +2052,13 @@ void setupScene() {
     glm::vec3 candleLightPos = glm::vec3(10.0,9.0,10.0);
     glm::vec3 candleLightColor = glm::vec3(1,0,0);
     glm::vec3 candleLightDirection = glm::vec3(-1, -1, 1);
-    glm::vec3 candleLightAttenuation = glm::vec3(1.0f,0.14f,0.007f);
+    //glm::vec3 candleLightAttenuation = glm::vec3(1.0f,0.14f,0.007f);
 
     glUniform3fv(candleShaderUniforms.lightPositionPoint, 1, &candleLightPos[0]);
     glUniform3fv(candleShaderUniforms.lightColorPoint, 1, &candleLightColor[0]);
     glUniform3fv(candleShaderUniforms.camPos, 1, &camPos[0]);
     glUniform3fv(candleShaderUniforms.lightDirection, 1, &candleLightDirection[0]);
-    glUniform3fv(candleShaderUniforms.attenuationChange, 1, &candleLightAttenuation[0]);
+    //glUniform3fv(candleShaderUniforms.attenuationChange, 1, &candleLightAttenuation[0]);
 
     lightingShader->useProgram();
 
@@ -2166,7 +2176,7 @@ int main() {
         updateJarrisonAnimation();
         updateSantaDirection();
         candleShader->useProgram();
-        updateCandleAttenuation();
+        //updateCandleAttenuation();
         lightingShader->useProgram();
         for(ornament& o : ornamentList){
             updateOrnamentCoordinate(o);

@@ -11,7 +11,7 @@ uniform vec3 lightPositionPoint;
 uniform vec3 lightColorPoint;
 uniform vec3 lightDirection;
 
-uniform vec3 attenuationChange;
+//uniform vec3 attenuationChange;
 
 uniform vec3 materialColor; //color of the object
 
@@ -31,13 +31,15 @@ void main() {
     vec3 diffuse;
     vec3 specular;*/
 
-    //float constant = 1.0f;
-    //float linear = 0.14f;
-    //float quadratic = 0.007f;
+    float constant = 1.0f;
+    float linear = 0.14f;
+    float quadratic = 0.007f;
 
+    /*
     float constantChange = attenuation.x;
     float linearChange = attentuation.y;
     float quadraticChange = attentuation.z;
+    */
 
     //float distance = length(lightPositionPoint - vPos);
     //float attenuation;// = 1.0f/(constant + linear * distance + quadratic * (distance * distance));
@@ -62,7 +64,7 @@ void main() {
     vec3 ambient = vec3(0.1, 0.1, 0.1);
 
     float pointDistance = length(lightPositionPoint - vPos);
-    float newAttenuation = 1.0f / (constantChange + linearChange * pointDistance + quadraticChange * (pointDistance * pointDistance));
+    float newAttenuation = 1.0f / (constant + linear * pointDistance + quadratic * (pointDistance * pointDistance));
 
     ////////////////////////////////////////////////////////////////////////
 
