@@ -13,6 +13,8 @@ uniform vec3 lightDirection;
 
 uniform vec3 materialColor; //color of the object
 
+uniform vec3 attentuationChange; // takes in 3 floats (constant, linear, quadratic)
+
 //attributes
 layout(location = 0) in vec3 vPos; //position of the vertex
 in vec3 vNormal; //position of the normal (y-axis)
@@ -30,6 +32,10 @@ void main() {
     float constant = 1.0f;
     float linear = 0.14f;
     float quadratic = 0.007f;
+
+    float constantChange = attenuation.x;
+    float linearChange = attentuation.y;
+    float quadraticChange = attentuation.z;
 
     //float distance = length(lightPositionPoint - vPos);
     float attenuation;// = 1.0f/(constant + linear * distance + quadratic * (distance * distance));
