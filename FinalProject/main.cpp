@@ -148,8 +148,8 @@ struct LightingShaderAttributes {       // stores the locations of all of our sh
 CSCI441::ShaderProgram *candleShader = nullptr;
 struct CandleShaderUniforms {
     GLint normalMtx;
-    GLint mvpMatrix;
-    GLint modelMtx;
+    GLint mvpMtx;
+    //GLint modelMtx;
     GLint lightPositionPoint;
     GLint lightColorPoint;
     GLint lightDirection;
@@ -317,12 +317,12 @@ void updateFirstPerson() {
 
 void computeMtxUniformsCandle(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
-    glUniformMatrix4fv(candleShaderUniforms.mvpMatrix, 1, GL_FALSE, &mvpMtx[0][0]);
+    glUniformMatrix4fv(candleShaderUniforms.mvpMtx, 1, GL_FALSE, &mvpMtx[0][0]);
 
     glm::mat3 normalMtx = glm::mat3(glm::transpose(glm::inverse(modelMtx)));
-    glUniformMatrix3fv(candleShaderUniforms.normalMtx, 1, GL_FALSE, &normalMtx[0][0]);
+    glUniformMatrix4fv(candleShaderUniforms.normalMtx, 1, GL_FALSE, &normalMtx[0][0]);
 
-    glUniformMatrix4fv(candleShaderUniforms.modelMtx, 1, GL_FALSE, &modelMtx[0][0]);
+    //glUniformMatrix4fv(candleShaderUniforms.modelMtx, 1, GL_FALSE, &modelMtx[0][0]);
 }
 
 void computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -891,11 +891,34 @@ void drawEvilSanta(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
 }
 
 void drawCandles(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(10,10,10));
+    modelMtx = glm::translate(modelMtx, glm::vec3(10,9,10));
+    //modelMtx = glm::scale(modelMtx, glm::vec3(10,9,10));
     computeMtxUniformsCandle(modelMtx,viewMtx,projMtx);
     glm::vec3 candleColor(glm::vec3{1.0,1.0,1.0});
     glUniform3fv(candleShaderUniforms.materialColor,1,&candleColor[0]);
     CSCI441::drawSolidSphere(5.0f,10,10);
+}
+void drawCandleBase(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-10.3f, 6.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 7.0f, 2.0f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBeltBuckleColor(glm::vec3{1.0,0.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBeltBuckleColor[0]);
+    CSCI441::drawSolidCube(0.5f);
+}
+
+void drawCandleString(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-10.3f, 9.0f, 10.0f));
+    modelMtx = glm::scale(modelMtx, glm::vec3(0.5f, 1.5f, 0.5f));
+    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
+    glm::vec3 santaBodyColor(glm::vec3{1.0,1.0,0.0});
+    glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
+    CSCI441::drawSolidSphere(0.8f,10,10);
+}
+
+void drawCandleModel(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    drawCandleBase(modelMtx,viewMtx,projMtx);
+    drawCandleString(modelMtx,viewMtx,projMtx);
 }
 
 /// Blossom drawing functions
@@ -1329,6 +1352,9 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     greenOrnamentModelMtx = glm::translate(greenOrnamentModelMtx, glm::vec3(0.3f, 13.0f, 10.0f));
     drawGreenOrnament(greenOrnamentModelMtx, viewMtx, projMtx);
 
+    glm::mat4 candleModelModelMtx(1.0f);
+    drawCandleModel(candleModelModelMtx, viewMtx, projMtx);
+
     /// draw jarrison
     glm::mat4 jarrisonModelMtx(1.0f);
     jarrisonModelMtx = glm::translate( glm::mat4(1.0), glm::vec3( jarrisonX, 0.0f, jarrisonZ ) );
@@ -1358,9 +1384,9 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
         drawCandyCane(c , viewMtx, projMtx);
     }
 
-    // TODO Candle Shader in Render
     candleShader->useProgram();
     glUniform3fv(candleShaderUniforms.camPos,1,&camPos[0]);
+
     glm::mat4 candleModelMtx = glm::mat4(1.0f);
     drawCandles(candleModelMtx,viewMtx,projMtx);
 
@@ -1433,6 +1459,10 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     drawTreeTopper(modelMatrix, viewMtx, projMtx);
 
     lightingShader->useProgram();
+
+    if(arcballCamActive){
+        glUniform3fv(candleShaderUniforms.camPos,1,&camPos[0]);
+    }
 }
 
 // make jarrisons eyes move
@@ -1560,17 +1590,14 @@ void setupShaders() {
     treeTopperShaderProgramAttributes.vPos = treeTopperShaderProgram->getAttributeLocation("vPos");
 
     candleShader = new CSCI441::ShaderProgram("shaders/candleShader.v.glsl", "shaders/candleShader.f.glsl");
-    candleShaderUniforms.mvpMatrix = candleShader->getUniformLocation("mvpMtx");
+    candleShaderUniforms.mvpMtx = candleShader->getUniformLocation("mvpMtx");
     candleShaderUniforms.normalMtx = candleShader->getUniformLocation("normalMtx");
-    candleShaderUniforms.modelMtx = candleShader->getUniformLocation("modelMtx");
-
+    //candleShaderUniforms.modelMtx = candleShader->getUniformLocation("modelMtx");
     candleShaderUniforms.lightPositionPoint = candleShader->getUniformLocation("lightPositionPoint");
     candleShaderUniforms.lightColorPoint = candleShader->getUniformLocation("lightColorPoint");
     candleShaderUniforms.lightDirection = candleShader->getUniformLocation("lightDirection");
-
     candleShaderUniforms.materialColor  = candleShader->getUniformLocation("materialColor");
     candleShaderUniforms.camPos = candleShader->getUniformLocation("camPos");
-
 
     candleShaderAttributes.vPos = candleShader->getAttributeLocation("vPos");
     candleShaderAttributes.vNormal = candleShader->getAttributeLocation("vNormal");
@@ -1922,7 +1949,7 @@ void setupScene() {
     /////////////////////////////////////////////
     candleShader->useProgram();
 
-    //glm::vec3 candleLightPos = glm::vec3(-55.0, 5.0, -55.0);
+    //glm::vec3 lightPoint = glm::vec3(-55.0, 5.0, -55.0);
     glm::vec3 candleLightPos = glm::vec3(10.0,9.0,10.0);
     glm::vec3 candleLightColor = glm::vec3(0,0,1);
     glm::vec3 candleLightDirection = glm::vec3(0,1,0);
@@ -1966,6 +1993,7 @@ int main() {
 
     // TODO #5 connect the CSCI441 objects library to our shader attribute inputs
     // needed to connect our 3D Object Library to our shader
+
     CSCI441::setVertexAttributeLocations( lightingShaderAttributes.vPos, lightingShaderAttributes.vertexNormal);
 
     printf("Controls:\n");

@@ -3,7 +3,7 @@
 //uniforms
 uniform mat4 mvpMtx;
 uniform mat3 normalMtx;
-uniform mat4 modelMtx;
+//uniform mat4 modelMtx;
 uniform vec3 camPos; //position of the camera
 
 //point light uniforms
@@ -21,8 +21,51 @@ in vec3 vNormal; //position of the normal (y-axis)
 out vec3 light;
 
 void main() {
+    gl_Position = mvpMtx * vec4(vPos,1.0);
+
+    /*vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;*/
+
+    float constant = 1.0f;
+    float linear = 0.14f;
+    float quadratic = 0.007f;
+
+    //float distance = length(lightPositionPoint - vPos);
+    float attenuation;// = 1.0f/(constant + linear * distance + quadratic * (distance * distance));
+
+    ////////////////////////////////////////////////////////////////////////
+    //vec3 normalLightVec = normalize(normalMtx * vNormal);
+    vec3 normalLightVec = normalize(-1 * lightDirection);
+    //vec4 vPosition = modelMtx * vec4(vPos, 1.0);
+    //vec3 viewVector = normalize(camPos - vPos);
+    vec3 vNormalWorld = normalize(normalMtx * vNormal);
+//////////////////////////////////////////////////////////////////////////////////////
+    vec3 pointLightDir = normalize(lightPositionPoint - vPos);
+    float pointDiff = max(dot(vNormalWorld,pointLightDir), 0.0);
+    vec3 pointDiffuse = lightColorPoint * materialColor * pointDiff;
+
+    vec3 pointViewDir = normalize(camPos - vPos);
+    vec3 pointReflectDir = -normalLightVec + 2 * (dot(vNormalWorld,normalLightVec) * vNormalWorld);
+
+    float pointSpec = pow(max(dot(pointViewDir, pointReflectDir), 0.0), 32.0f);
+    vec3 pointSpecular = lightColorPoint * materialColor * pointSpec;
+
+    vec3 ambient = vec3(0.1, 0.1, 0.1);
+
+    float pointDistance = length(lightPositionPoint - vPos);
+    attenuation = 1.0f / (constant + linear * pointDistance + quadratic * (pointDistance * pointDistance));
+
+    ////////////////////////////////////////////////////////////////////////
+
+    ambient *= attenuation;
+    pointDiffuse *= attenuation;
+    pointSpecular *= attenuation;
+
+    light = pointDiffuse + pointSpecular + ambient;
+
     //create normal vector
-    vec3 normVec;
+    /*vec3 normVec;
     normVec = normalize(normalMtx * vNormal);
 
     vec4 vPosition = modelMtx * vec4(vPos, 1.0); // vertex position in world space
@@ -53,10 +96,10 @@ void main() {
 
     vec3 diffusion; //diffusion intensity
     vec3 specular; //specular intensity
-    diffusion = diffuseResultPoint /*+ (5*diffuseResultDirVec) + diffuseResultSpot) + diffuseResultPoint2*/;
-    specular = specularResultPoint /*+ (5*specularResultDirVec) + specularResultSpot)*/;
+    diffusion = diffuseResultPoint *//*+ (5*diffuseResultDirVec) + diffuseResultSpot) + diffuseResultPoint2*//*;
+    specular = specularResultPoint *//*+ (5*specularResultDirVec) + specularResultSpot)*//*;
 
     light = ambient + specular + diffusion;
 
-    gl_Position = mvpMtx * vec4(vPos, 1.0);
+    gl_Position = mvpMtx * vec4(vPos, 1.0);*/
 }
