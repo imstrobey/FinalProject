@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-C:/Users/emely/Desktop/CSCI441/FinalProject/FinalProject/main.cpp
+D:/CSCI 441/LAST_FINAL_PROJECT/FinalProject/FinalProject/main.cpp
 GL/glew.h
 -
 GLFW/glfw3.h
@@ -36,5 +36,7 @@ CSCI441/SimpleShader.hpp
 CSCI441/ShaderProgram.hpp
 -
 CSCI441/TextureUtils.hpp
+-
+algorithm
 -
 

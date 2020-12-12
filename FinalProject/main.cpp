@@ -1,11 +1,10 @@
 /*
  *  CSCI 441, Computer Graphics, Fall 2020
  *
- *  Project: Midterm
+ *  Project: Final Project
  *  File: main.cpp
  *
- *	Base Code Author: Jeffrey Paone - Fall 2020
- *	Additional Work: Alex Langfield, Vlad Muresan, Emelyn Pak & Liam Stacy
+ *	Authors: Alex Langfield, Vlad Muresan, Emelyn Pak & Liam Stacy
  *
  *  Description:
  *      Contains the midterm project source code for pitcrew VAOs VBOs and MVPs
@@ -44,20 +43,14 @@ const GLfloat quadSize = 80.0f;
 int leftMouseButton;    	 				// status of the mouse button
 double mouseX = -99999, mouseY = -99999;    // last known X and Y of the mouse
 
-glm::vec3 camPos, camPos0, camPos1, camPos2;    // camera POSITION in cartesian coordinates for arcball cam
+glm::vec3 camPos, camPos0;                      // camera POSITION in cartesian coordinates for arcball cam
 GLdouble cameraTheta, cameraPhi;                // camera DIRECTION in spherical coordinates for arcball cam
 glm::vec3 arcballLookAtPoint;                   // arcball camera look at point
 float radius = 50;                              // arcball camera radius
 bool ctrlPressed = false;                       // for arcball camera zoom
 
 bool arcballCamActive = true, freeCamActive = false, fpCamActive = false;
-int activeCamera = 0, currCharView = 0; // track which camera and which character to use
-
-struct Trees {                       // keeps track of an individual tree's attributes
-    glm::mat4 modelMatrix;          // its position and size
-    glm::vec3 color;                // its color
-};
-std::vector<Trees> trees;            // list of trees
+int activeCamera = 0; // track which camera and which character to use
 
 glm::vec3 freeCamPos;            		// camera position in cartesian coordinates
 glm::vec3 freeCamAngles;               	// camera DIRECTION in spherical coordinates stored as (theta, phi, radius)
@@ -67,16 +60,9 @@ glm::vec2 freeCamSpeed;                 // cameraSpeed --> x = forward/backward 
 glm::vec3 fpCamPos;
 glm::vec3 fpCamLookAtPoint;
 
-struct Bushes {                     // keeps track of an individual bush's attributes
-    glm::mat4 modelMatrix;          // position and size of bush
-    glm::vec3 color;                // bush color
-};
-std::vector<Bushes> bushes;         // list of bushes
-
 // TODO candy canes
 struct CandyCanes {                     // keeps track of an individual bush's attributes
     glm::mat4 modelMatrix;          // position and size of bush
-    glm::vec3 color;                // bush color
 };
 std::vector<CandyCanes> candyCanes;         // list of bushes
 
@@ -110,14 +96,7 @@ GLuint groundVAO;                       // the VAO descriptor for our ground pla
 // TODO evil santa
 /// global santa variabls
 float santaX = 60.0f, santaY = 0.0f, santaZ = 60.0f; //10.0f, 8.0f, 10.0f
-float santaRotation = 0.0f;
 bool santaMoveRight = true;
-
-
-/// Global Blossom variables
-float blossomX = 5.0f,  blossomY = 1.5f, blossomZ = 5.0f;   // blossom position
-float blossomRotation = 0.0f;                               // blossom rotation angle
-bool blossomMoving = false;                                 // checks if blossom is moving for animation
 
 /// jarrison global variables
 float jarrisonX = 10.0f, jarrisonY = 1.5f, jarrisonZ = 0.0f; // jarrison position
@@ -126,12 +105,8 @@ bool jarrisonMoving = false;                                 // tracks if jarris
 const float MAX_EYE_OFFSET = 0.25f;                          // variables to animate jarrison
 float currentEyeOffset = 0.0f;
 bool eyesMovingInward = false;
-
-/// Voltorb global variables
-glm::vec3 playerPos;
-glm::vec3 playerMove;
-float rotAngle = 0.0;
-bool playerMoving = false;
+bool jarrisonJumping = false;
+bool jarrisonComingDown = false;
 
 /// Shader Program information
 CSCI441::ShaderProgram *lightingShader = nullptr;   // the wrapper for our shader program
@@ -147,31 +122,13 @@ struct LightingShaderUniforms {         // stores the locations of all of our sh
     GLint spotLightPosition;
     GLint spotLightDirection;
     GLint spotLightColor;
-    //GLint attenuationChange;//rREMOVE
 } lightingShaderUniforms;
 struct LightingShaderAttributes {       // stores the locations of all of our shader attributes
     // TODO #2 add variables to store the new attributes that were created
     GLint vertexNormal;
     GLint vPos;
 } lightingShaderAttributes;
-
-CSCI441::ShaderProgram *candleShader = nullptr;
-struct CandleShaderUniforms {
-    GLint normalMtx;
-    GLint mvpMtx;
-    //GLint modelMtx;
-    GLint lightPositionPoint;
-    GLint lightColorPoint;
-    GLint lightDirection;
-    GLint materialColor;
-    GLint camPos;
-    //GLint attenuationChange;
-
-} candleShaderUniforms;
-struct CandleShaderAttributes {
-    GLint vPos;
-    GLint vNormal;
-} candleShaderAttributes;
+bool strobe = false;
 
 // Billboard shader program
 CSCI441::ShaderProgram *billboardShaderProgram = nullptr;
@@ -189,12 +146,22 @@ CSCI441::ShaderProgram *treeTopperShaderProgram = nullptr;
 struct TreeTopperShaderProgramUniforms {
     GLint mvpMatrix;
     GLint topperColor;
-} treeTopperShaderProgramUniforms;
+} treeTopperShaderUniforms;
 struct TreeTopperShaderProgramAttributes {
     GLint vPos;                         // the vertex position
 } treeTopperShaderProgramAttributes;
-
 glm::vec3 topperColor;
+
+// Displacement shader program
+CSCI441::ShaderProgram *displacementShaderProgram = nullptr;
+struct DisplacementShaderUniforms {
+    GLint mvpMatrix;
+} displacementShaderUniforms;
+struct DisplacementShaderAttributes {
+    GLint vPos;
+    GLint vNormal;
+    GLint vDisplacement;
+} displacementShaderAttributes;
 
 /// keeps track of sprite shader program
 CSCI441::ShaderProgram *texShaderProgram = nullptr;
@@ -207,16 +174,14 @@ struct TexShaderProgramAttributes {
     GLint vTexCoord;
 } texShaderProgramAttributes;
 
-
 // point sprite information
-const GLuint NUM_SPRITES = 300;          // the number of sprites to draw /// TODO redraw sprites
+const GLuint NUM_SPRITES = 1500;          // the number of sprites to draw /// TODO redraw sprites
 const GLfloat MAX_BOX_SIZE = 80;        // our sprites exist within a box of this size
 glm::vec3* spriteLocations = nullptr;   // the (x,y,z) location of each sprite
 GLushort* spriteIndices = nullptr;      // the order to draw the sprites in
 GLfloat* distances = nullptr;           // will be used to store the distance to the camera
 GLuint spriteTextureHandle;             // the texture to apply to the sprite
 const GLfloat NEW_BOX_SIZE = 35;
-glm::vec3 gravity = glm::vec3(0,-1.0f,0);
 
 // all drawing information
 const struct VAO_IDS {
@@ -231,7 +196,6 @@ GLuint ibos[NUM_VAOS];                  // an array of our IBO descriptors
 GLuint rightTextureHandle;
 GLuint leftTextureHandle;
 GLuint topTextureHandle;
-//GLuint bottomTextureHandle;
 GLuint frontTextureHandle;
 GLuint backTextureHandle;
 
@@ -239,20 +203,29 @@ GLuint backTextureHandle;
 GLuint rightVAO,rightVBO[2];
 GLuint leftVAO,leftVBO[2];
 GLuint topVAO,topVBO[2];
-GLuint bottomVAO,bottomVBO[2];
 GLuint frontVAO,frontVBO[2];
 GLuint backVAO,backVBO[2];
 
-
-void renderScene(glm::mat4 view, glm::mat4 proj);
-
 bool mackHack = false;
 
-// END GLOBAL VARIABLES
-//********************************************************************************
+// ground plane variables
+int numGroundPoints = 25600;
 
-//********************************************************************************
+struct VertexNormal {
+    GLfloat x, y, z;
+    GLfloat xNorm, yNorm, zNorm;
+    GLfloat displacement;
+};
+VertexNormal groundQuad[25600];
+GLuint vbods[2];       // 0 - VBO, 1 - IBO
+GLuint baseVAO;
+
+GLuint baseVBOS[2];
+// END GLOBAL VARIABLES
+
 // Helper Functions
+
+void renderScene(glm::mat4 view, glm::mat4 proj);
 
 GLdouble getRand() { return rand() / (GLdouble)RAND_MAX; }
 
@@ -260,39 +233,17 @@ GLfloat randNumber( GLfloat max ) {
     return rand() / (GLfloat)RAND_MAX * max * 2.0 - max;
 }
 
-// update arcball camera position based on phi, theta and radius
+///// update arcball camera position based on phi, theta and radius /////
 void updateArcballCamera() {
     // convert our theta and phi spherical angles to a cartesian vector
     // camera position
-    camPos0 = {radius*glm::sin(cameraTheta)*glm::sin(cameraPhi),
+    camPos = {radius*glm::sin(cameraTheta)*glm::sin(cameraPhi),
                -radius*glm::cos(cameraPhi),
                -radius*glm::cos(cameraTheta)*glm::sin(cameraPhi)};
-    camPos1 = {radius*glm::sin(cameraTheta)*glm::sin(cameraPhi),
-               -radius*glm::cos(cameraPhi),
-               -radius*glm::cos(cameraTheta)*glm::sin(cameraPhi)};
-    camPos2 = {radius*glm::sin(cameraTheta)*glm::sin(cameraPhi),
-               -radius*glm::cos(cameraPhi),
-               -radius*glm::cos(cameraTheta)*glm::sin(cameraPhi)};
-
-    // look at point, based on character
-    // jarrison cam
-    if (currCharView % 3 == 0) {
-        arcballLookAtPoint = glm::vec3{jarrisonX, jarrisonY, jarrisonZ};
-        camPos = camPos0;
-    }
-        // voltorb cam
-    else if (currCharView % 3 == 1) {
-        arcballLookAtPoint = glm::vec3{playerMove.x, playerMove.y, playerMove.z};
-        camPos = camPos1;
-    }
-        // blossom cam
-    else {
-        arcballLookAtPoint = glm::vec3{blossomX, blossomY, blossomZ};
-        camPos = camPos2;
-    }
+    arcballLookAtPoint = glm::vec3{jarrisonX, jarrisonY, jarrisonZ};
 }
 
-// update free camera position based on user input
+///// update free camera position based on user input /////
 void updateFreeCamDirection() {
     // ensure phi doesn't flip our camera
     if(freeCamAngles.y <= 0 ) freeCamAngles.y = 0.0f + 0.001f;
@@ -307,33 +258,24 @@ void updateFreeCamDirection() {
     freeCamDir = glm::normalize(freeCamDir);
 }
 
-// create scissor box for first person view in bottom left corner of screen
+///// create scissor box for first person view in bottom left corner of screen /////
 void updateFirstPerson() {
     // jarrison fp cam
-    if (currCharView % 3 == 0) {
-        fpCamPos = {jarrisonX + 5.0f * sin(jarrisonRadians), jarrisonY + 2.0, jarrisonZ + 5.0f * cos(jarrisonRadians)};
-        fpCamLookAtPoint = {jarrisonX + 10.0f * sin(jarrisonRadians) , jarrisonY + 2.0f, (jarrisonZ) + 10.0f * cos(jarrisonRadians)};
-    }
-        // voltorb fp cam
-    else if (currCharView % 3 == 1) {
-        fpCamPos = {playerPos.x + 5.0f * sin(rotAngle), playerPos.y + 2.0, playerPos.z + 5.0f * cos(rotAngle)};
-        fpCamLookAtPoint = {playerPos.x + 10.0f * sin(rotAngle) , playerPos.y + 2.0f, (playerPos.z) + 10.0f * cos(rotAngle)};
-    }
-        // blossom fp cam
-    else {
-        fpCamPos = {blossomX + 5.0f * sin(blossomRotation), blossomY + 2.0, blossomZ + 5.0f * cos(blossomRotation)};
-        fpCamLookAtPoint = {blossomX + 10.0f * sin(blossomRotation) , blossomY + 2.0f, (blossomZ) + 10.0f * cos(blossomRotation)};
-    }
+    fpCamPos = {jarrisonX + 5.0f * sin(jarrisonRadians), jarrisonY + 2.0, jarrisonZ + 5.0f * cos(jarrisonRadians)};
+    fpCamLookAtPoint = {jarrisonX + 10.0f * sin(jarrisonRadians) , jarrisonY + 2.0f, (jarrisonZ) + 10.0f * cos(jarrisonRadians)};
 }
 
-void computeMtxUniformsCandle(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+///// compute and send matrix uniforms for different shader files /////
+void computeAndSendMatrixUniformsDisplacement(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    // precompute the Model-View-Projection matrix on the CPU, then send it to the shader on the GPU
     glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
-    glUniformMatrix4fv(candleShaderUniforms.mvpMtx, 1, GL_FALSE, &mvpMtx[0][0]);
+    glUniformMatrix4fv( displacementShaderUniforms.mvpMatrix, 1, GL_FALSE, &mvpMtx[0][0] );
+}
 
-    glm::mat3 normalMtx = glm::mat3(glm::transpose(glm::inverse(modelMtx)));
-    glUniformMatrix4fv(candleShaderUniforms.normalMtx, 1, GL_FALSE, &normalMtx[0][0]);
-
-    //glUniformMatrix4fv(candleShaderUniforms.modelMtx, 1, GL_FALSE, &modelMtx[0][0]);
+void computeAndSendMatrixUniformsTree(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    // precompute the Model-View-Projection matrix on the CPU, then send it to the shader on the GPU
+    glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
+    glUniformMatrix4fv(treeTopperShaderUniforms.mvpMatrix, 1, GL_FALSE, &mvpMtx[0][0] );
 }
 
 void computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -345,6 +287,7 @@ void computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::ma
     glUniformMatrix3fv(lightingShaderUniforms.normalMatrix,1,GL_FALSE,&normMtx[0][0]);
 }
 
+///// compute and send transformation matrices for different shader files /////
 void computeAndSendTransformationMatrices5(glm::mat4 modelMatrix, glm::mat4 viewMatrix, glm::mat4 projectionMatrix,
                                           GLint mvMtxLocation, GLint projMtxLocation) {
     glm::mat4 mvMatrix = viewMatrix * modelMatrix;
@@ -387,20 +330,20 @@ static void keyboard_callback( GLFWwindow *window, int key, int scancode, int ac
             case GLFW_KEY_W: // move jarrison forward
                 jarrisonZ += cos(jarrisonRadians) * MOVEMENT_CONSTANT;
                 jarrisonX += sin(jarrisonRadians) * MOVEMENT_CONSTANT;
-                if (jarrisonZ > quadSize) jarrisonZ = quadSize - 0.01;
-                if (jarrisonX > quadSize) jarrisonX = quadSize - 0.01;
-                if (jarrisonZ < -quadSize) jarrisonZ = -quadSize + 0.01;
-                if (jarrisonX < -quadSize) jarrisonX = -quadSize + 0.01;
+                if (jarrisonZ > MAX_POS) jarrisonZ = MAX_POS - 0.01;
+                if (jarrisonX > MAX_POS) jarrisonX = MAX_POS - 0.01;
+                if (jarrisonZ < -MAX_POS) jarrisonZ = -MAX_POS + 0.01;
+                if (jarrisonX < -MAX_POS) jarrisonX = -MAX_POS + 0.01;
                 camPos0 += glm::vec3{sin(jarrisonRadians) * MOVEMENT_CONSTANT, 0.0f, cos(jarrisonRadians) * MOVEMENT_CONSTANT};
                 jarrisonMoving = true;
                 break;
             case GLFW_KEY_S: // move jarrison backward
                 jarrisonZ -= cos(jarrisonRadians) * MOVEMENT_CONSTANT;
                 jarrisonX -= sin(jarrisonRadians) * MOVEMENT_CONSTANT;
-                if (jarrisonZ > quadSize) jarrisonZ = quadSize - 0.01;
-                if (jarrisonX > quadSize) jarrisonX = quadSize - 0.01;
-                if (jarrisonZ < -quadSize) jarrisonZ = -quadSize + 0.01;
-                if (jarrisonX < -quadSize) jarrisonX = -quadSize + 0.01;
+                if (jarrisonZ > MAX_POS) jarrisonZ = MAX_POS - 0.01;
+                if (jarrisonX > MAX_POS) jarrisonX = MAX_POS - 0.01;
+                if (jarrisonZ < -MAX_POS) jarrisonZ = -MAX_POS + 0.01;
+                if (jarrisonX < -MAX_POS) jarrisonX = -MAX_POS + 0.01;
                 camPos0 += glm::vec3{sin(jarrisonRadians) * MOVEMENT_CONSTANT, 0.0f, cos(jarrisonRadians) * MOVEMENT_CONSTANT};
                 jarrisonMoving = true;
                 break;
@@ -411,65 +354,6 @@ static void keyboard_callback( GLFWwindow *window, int key, int scancode, int ac
             case GLFW_KEY_D: // rotate jarrison right
                 jarrisonRadians -= ROTATE_CONSTANT;
                 jarrisonMoving = true;
-                break;
-            case GLFW_KEY_T: // move voltorb forward
-                playerMove.z += sin(rotAngle) * MOVEMENT_CONSTANT;
-                playerMove.x += cos(rotAngle) * MOVEMENT_CONSTANT;
-                if (playerMove.z < -MAX_POS) playerMove.z = -MAX_POS + 0.01;
-                if (playerMove.x < -MAX_POS) playerMove.x = -MAX_POS + 0.01;
-                if (playerMove.z > MAX_POS) playerMove.z = MAX_POS - 0.01;
-                if (playerMove.x > MAX_POS) playerMove.x = MAX_POS - 0.01;
-                camPos1 += glm::vec3{cos(rotAngle) * MOVEMENT_CONSTANT, 0.0f, sin(rotAngle) * MOVEMENT_CONSTANT};
-                playerMoving = true;
-                break;
-            case GLFW_KEY_G: // move voltorb backward
-                playerMove.z -= sin(rotAngle) * MOVEMENT_CONSTANT;
-                playerMove.x -= cos(rotAngle) * MOVEMENT_CONSTANT;
-                if (playerMove.z < -MAX_POS) playerMove.z = -MAX_POS + 0.01;
-                if (playerMove.x < -MAX_POS) playerMove.x = -MAX_POS + 0.01;
-                if (playerMove.z > MAX_POS) playerMove.z = MAX_POS - 0.01;
-                if (playerMove.x > MAX_POS) playerMove.x = MAX_POS - 0.01;
-                camPos1 += glm::vec3{cos(rotAngle) * MOVEMENT_CONSTANT, 0.0f, sin(rotAngle) * MOVEMENT_CONSTANT};
-                playerMoving = true;
-                break;
-            case GLFW_KEY_F: // rotate voltorb left
-                rotAngle -= ROTATE_CONSTANT;
-                playerMoving = true;
-                break;
-            case GLFW_KEY_H: // rotate voltorb right
-                rotAngle += ROTATE_CONSTANT;
-                playerMoving = true;
-                break;
-            case GLFW_KEY_I: // move blossom forward
-                blossomZ += cos(blossomRotation) * MOVEMENT_CONSTANT;
-                blossomX += sin(blossomRotation) * MOVEMENT_CONSTANT;
-                if (blossomZ > MAX_POS) blossomZ = MAX_POS - 0.01;
-                if (blossomX > MAX_POS) blossomX = MAX_POS - 0.01;
-                if (blossomZ < -MAX_POS) blossomZ = -MAX_POS + 0.01;
-                if (blossomX < -MAX_POS) blossomX = -MAX_POS + 0.01;
-                camPos2 += glm::vec3{sin(blossomRotation) * MOVEMENT_CONSTANT, 0.0f, cos(blossomRotation) * MOVEMENT_CONSTANT};
-                blossomMoving = true;
-                break;
-            case GLFW_KEY_K: // move blossom backward
-                blossomZ -= cos(blossomRotation) * MOVEMENT_CONSTANT;
-                blossomX -= sin(blossomRotation) * MOVEMENT_CONSTANT;
-                if (blossomZ > MAX_POS) blossomZ = MAX_POS - 0.01;
-                if (blossomX > MAX_POS) blossomX = MAX_POS - 0.01;
-                if (blossomZ < -MAX_POS) blossomZ = -MAX_POS + 0.01;
-                if (blossomX < -MAX_POS) blossomX = -MAX_POS + 0.01;
-                camPos2 += glm::vec3{sin(blossomRotation) * MOVEMENT_CONSTANT, 0.0f, cos(blossomRotation) * MOVEMENT_CONSTANT};
-                blossomMoving = true;
-                break;
-            case GLFW_KEY_J: // rotate blossom left
-                blossomRotation += ROTATE_CONSTANT;
-                blossomMoving = true;
-                break;
-            case GLFW_KEY_L: // rotate blossom right
-                blossomRotation -= ROTATE_CONSTANT;
-                blossomMoving = true;
-                break;
-            case GLFW_KEY_C:
-                currCharView += 1;
                 break;
             case GLFW_KEY_1:
                 activeCamera += 1;
@@ -514,19 +398,21 @@ static void keyboard_callback( GLFWwindow *window, int key, int scancode, int ac
                 freeCamAngles.y -= freeCamSpeed.y;
                 updateFreeCamDirection();
                 break;
+            case GLFW_KEY_V:
+                strobe = !strobe;
+                break;
             default: break; // to remove CLion warning
         }
     }
     else { // for animation and pressing control (camera zoom)
         jarrisonMoving = false;
         ctrlPressed = false;
-        blossomMoving = false;
-        playerMoving = false;
     }
     if (arcballCamActive) updateArcballCamera();      // update arcball camera (x,y,z) based on (radius,theta,phi)
     else if (freeCamActive) updateFreeCamDirection(); // update free camera
     if (fpCamActive) updateFirstPerson();             // if the first person cam is active,
 }
+
 
 // update program variables based on cursor
 static void cursor_callback( GLFWwindow *window, double x, double y ) {
@@ -565,24 +451,9 @@ static void mouse_button_callback( GLFWwindow *window, int button, int action, i
     }
 }
 
-/// drawing trees for the environment
-void drawTree(Trees tree, glm::mat4 viewMtx, glm::mat4 projMtx) {
-    /// base of tree
-    computeAndSendMatrixUniforms(tree.modelMatrix, viewMtx, projMtx);
-    glUniform3fv(lightingShaderUniforms.materialColor, 1, &tree.color[0]);
-    CSCI441::drawSolidCylinder(1.0f, 1.0f, 15.0f, 10, 10);
+///// DRAW FUNCTIONS /////
 
-    /// top of tree
-    glm::mat4 transMtx = glm::translate(glm::mat4(1.0f), glm::vec3(0, 15.0f, 0));
-    glm::mat4 scaleMtx = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 3.0f, 1.0f));
-    glm::mat4 leafModelMtx =  transMtx * scaleMtx * tree.modelMatrix;
-    computeAndSendMatrixUniforms(leafModelMtx, viewMtx, projMtx);
-    glUniform3fv(lightingShaderUniforms.materialColor, 1, &tree.color[0]);
-    CSCI441::drawSolidSphere(3.0f, 30, 30);
-}
-
-// TODO Christmas Tree
-/// drawing christmas tree
+/// christmas tree drawing functions
 void drawChristmasTree(ChristmasTree tree, glm::mat4 viewMtx, glm::mat4 projMtx){
     computeAndSendMatrixUniforms(tree.modelMatrix, viewMtx, projMtx);
     glUniform3fv(lightingShaderUniforms.materialColor, 1, &tree.color[0]);
@@ -611,6 +482,7 @@ void drawChristmasTreeTrunk(ChristmasTreeTrunk trunk, glm::mat4 viewMtx, glm::ma
     CSCI441::drawSolidCylinder(4.0f, 4.0f, 10.0f, 10, 10);
 }
 
+/// candy cane drawing functions
 void drawCandyCane(CandyCanes cane, glm::mat4 viewMtx, glm::mat4 projMtx){
     computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
     glm::vec3 candyColor(glm::vec3{1.0,0.0,0.0});
@@ -641,15 +513,7 @@ void drawCandyCane(CandyCanes cane, glm::mat4 viewMtx, glm::mat4 projMtx){
     computeAndSendMatrixUniforms(cane.modelMatrix, viewMtx, projMtx);
 }
 
-
-// generateEnvironment() ///////////////////////////////////////////////////////
-//
-//  This function creates our world which will consist of a grid in the XZ-Plane
-//      and randomly placed and sized buildings of varying colors.
-//
-////////////////////////////////////////////////////////////////////////////////
-
-//  This function creates our world which consists of trees, bushes and a grid
+//// genenrate environment function
 void generateEnvironment() {
     // parameters to size our world
     const GLint GRID_WIDTH = 100;
@@ -661,7 +525,20 @@ void generateEnvironment() {
     const GLfloat BOTTOM_END_POINT = -GRID_LENGTH / 2.0f - 5;
     const GLfloat TOP_END_POINT = GRID_LENGTH / 2.0f + 5;
 
-    // TODO Christmas Tree
+    // generate random trees and bushes to put around the scene
+    for (int i = LEFT_END_POINT; i < RIGHT_END_POINT; i += GRID_SPACING_WIDTH) { // go left to right
+        for (int j = BOTTOM_END_POINT; j < TOP_END_POINT; j += GRID_SPACING_LENGTH) { // go bottom to top
+            if (i % 3 == 0 && j % 3 == 0 && getRand() < 0.01) { // if the point is even and random_variable < 0.4
+                /// set candy cane positions
+                CandyCanes cane;
+                glm::mat4 transMtx = glm::translate(glm::mat4(1.0f), glm::vec3(i, 0.0f, j));
+                cane.modelMatrix = transMtx;
+                candyCanes.push_back(cane);
+            }
+        }
+    }
+
+    /// set xmas tree positions
     glm::mat4 transMtx = glm::translate(glm::mat4(1.0f), glm::vec3(-35.0f, 5.0f, -25.0f));
     christmasTree.modelMatrix = transMtx;
     christmasTree.color = glm::vec3(0.0f,1.0f,0.0f);
@@ -671,22 +548,10 @@ void generateEnvironment() {
     christmasTrunk.color = glm::vec3(0.4f, 0.2f, 0.2f);
 
 
-    // generate random trees and bushes to put around the scene
-    for (int i = LEFT_END_POINT; i < RIGHT_END_POINT; i += GRID_SPACING_WIDTH) { // go left to right
-        for (int j = BOTTOM_END_POINT; j < TOP_END_POINT; j += GRID_SPACING_LENGTH) { // go bottom to top
-            if (i % 3 == 0 && j % 3 == 0 && getRand() < 0.01) { // if the point is even and random_variable < 0.4
-                // TODO Christmas Canes
-                CandyCanes cane;
-                glm::mat4 transMtx = glm::translate(glm::mat4(1.0f), glm::vec3(i, 0.0f, j));
-                cane.modelMatrix = transMtx;
-                candyCanes.push_back(cane);
-            }
-        }
-    }
+
 }
 
-// TODO Evil Santa
-/// drawing santa hierarchically
+/// drawing santa hierarchically functions
 void drawSantaBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     modelMtx = glm::translate(modelMtx, glm::vec3(10.0f, 8.0f, 10.0f));
     modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
@@ -695,6 +560,7 @@ void drawSantaBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
     CSCI441::drawSolidSphere(1.0f,10,10);
 }
+
 void drawSantaLeftArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     modelMtx = glm::translate(modelMtx, glm::vec3(6.0f, 9.0f, 10.0f));
     modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
@@ -704,6 +570,7 @@ void drawSantaLeftArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     glUniform3fv(lightingShaderUniforms.materialColor,1,&santaHeadColor[0]);
     CSCI441::drawSolidCylinder(0.4f, 0.3f, 1.5, 10, 10);
 }
+
 void drawSantaLeftHand(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     modelMtx = glm::translate(modelMtx, glm::vec3(-1.8f, 9.0f, 11.5f));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.3f, 2.0f, 2.0f));
@@ -865,7 +732,6 @@ void drawSantaHat(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     CSCI441::drawSolidSphere(0.15,10,10);
 }
 
-// TODO santa eyes hemispheres???
 void drawSantaEyes(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     modelMtx = glm::translate(modelMtx, glm::vec3(9.0f, 15.0f, 9.0f));
     modelMtx = glm::scale(modelMtx, glm::vec3(5.0f, 5.0f, 5.0f));
@@ -901,14 +767,7 @@ void drawEvilSanta(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     drawSantaBazookaScopeVisor(modelMtx,viewMtx,projMtx);
 }
 
-void drawCandles(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(10,9,10));
-    //modelMtx = glm::scale(modelMtx, glm::vec3(10,9,10));
-    computeMtxUniformsCandle(modelMtx,viewMtx,projMtx);
-    glm::vec3 candleColor(glm::vec3{1.0,1.0,1.0});
-    glUniform3fv(candleShaderUniforms.materialColor,1,&candleColor[0]);
-    CSCI441::drawSolidSphere(5.0f,10,10);
-}
+/// candle drawing functions
 void drawCandleBase(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
     modelMtx = glm::translate(modelMtx, glm::vec3(-10.3f, 6.0f, 10.0f));
     modelMtx = glm::scale(modelMtx, glm::vec3(2.0f, 7.0f, 2.0f));
@@ -928,100 +787,9 @@ void drawCandleString(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
 }
 
 void drawCandleModel(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
+    modelMtx = glm::translate(modelMtx, glm::vec3(-17.0f, -4.0f, -17.0f));
     drawCandleBase(modelMtx,viewMtx,projMtx);
     drawCandleString(modelMtx,viewMtx,projMtx);
-}
-
-/// Blossom drawing functions
-void drawBlossomBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(blossomX, blossomY+1.5f, blossomZ));
-    modelMtx = glm::scale(modelMtx, glm::vec3(1.5f, 1.5f, 1.5f));
-    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
-    glm::vec3 bodyColor(glm::vec3{0.9,0.3,0.8});
-    glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
-    CSCI441::drawSolidCube(1.0f);
-}
-
-void drawBlossomHead(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(blossomX, blossomY+3.25f, blossomZ));
-    modelMtx = glm::scale(modelMtx, glm::vec3(1.5f, 1.5f, 1.5f));
-    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
-    glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.9});
-    glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
-    CSCI441::drawSolidSphere(0.5f,10.0f,10.0f);
-}
-
-void drawBlossomNeck(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(blossomX,blossomY+2.5f,blossomZ));
-    modelMtx = glm::scale(modelMtx, glm::vec3(1.5f, 2.0f, 1.5f));
-    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
-    glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.9});
-    glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
-    CSCI441::drawSolidCube(0.25f);
-}
-
-void drawBlossomRightArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(blossomX-1.0f, blossomY+1.5f, blossomZ));
-    modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,3.0f,1.5f));
-    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
-    glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.9});
-    glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
-    CSCI441::drawSolidCube(0.5f);
-}
-
-void drawBlossomLeftArm(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(blossomX+1.0f, blossomY+1.5f, blossomZ));
-    modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,3.0f,1.5f));
-    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
-    glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.9});
-    glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
-    CSCI441::drawSolidCube(0.5f);
-}
-
-void drawBlossomRightLeg(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(blossomX-0.5f, blossomY, blossomZ));
-    modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,3.0f,1.5f));
-    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
-    glm::vec3 bodyColor(glm::vec3{0.5,0.5,0.0});
-    glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
-    CSCI441::drawSolidCube(0.5f);
-}
-
-void drawBlossomLeftLeg(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(blossomX+0.5f, blossomY, blossomZ));
-    modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,3.0f,1.5f));
-    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
-    glm::vec3 bodyColor(glm::vec3{0.5,0.5,0.0});
-    glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
-    CSCI441::drawSolidCube(0.5f);
-}
-
-void drawBlossomNose(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    modelMtx = glm::translate(modelMtx, glm::vec3(blossomX,blossomY+3.2f,blossomZ+0.5f));
-    modelMtx = glm::scale(modelMtx, glm::vec3(1.5f,1.5f,1.5f));
-    computeAndSendMatrixUniforms(modelMtx,viewMtx,projMtx);
-    glm::vec3 bodyColor(glm::vec3{1.0,1.0,0.8});
-    glUniform3fv(lightingShaderUniforms.materialColor,1,&bodyColor[0]);
-    CSCI441::drawSolidSphere(0.20f,10.0f,10.0f);
-}
-
-/// Draw Blossom
-void drawBlossom(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    drawBlossomBody(modelMtx,viewMtx,projMtx);
-    drawBlossomNeck(modelMtx,viewMtx,projMtx);
-    drawBlossomRightArm(modelMtx,viewMtx,projMtx);
-    drawBlossomLeftArm(modelMtx,viewMtx,projMtx);
-    drawBlossomRightLeg(modelMtx,viewMtx,projMtx);
-    drawBlossomLeftLeg(modelMtx,viewMtx,projMtx);
-    if(blossomMoving){
-        modelMtx = glm::translate(modelMtx, glm::vec3(0.0f,-0.5f,0.0f));
-        drawBlossomHead(modelMtx,viewMtx,projMtx);
-        drawBlossomNose(modelMtx,viewMtx,projMtx);
-    }
-    else{
-        drawBlossomHead(modelMtx,viewMtx,projMtx);
-        drawBlossomNose(modelMtx,viewMtx,projMtx);
-    }
 }
 
 /// Jarrison functions
@@ -1136,107 +904,15 @@ void drawJarrison( glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     if (jarrisonMoving) drawJarrisonMouth(modelMtx, viewMtx, projMtx);
 }
 
-/// Voltorb functions
-void drawVoltorbRightEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    //right eye
-
-    glm::mat4 rightEyeModelMtx(1.0f);
-
-    if(playerMoving){
-        glm::vec3 bodyColor3( glm::vec3{0.0f,0.0f,1.0f});
-        glUniform3fv(lightingShaderUniforms.materialColor, 1, &bodyColor3[0]);
-    }else{
-        glm::vec3 bodyColor3( glm::vec3{1.0f,1.0f,1.0f});
-        glUniform3fv(lightingShaderUniforms.materialColor, 1, &bodyColor3[0]);
-    }
-
-
-    //put it in the correct place
-    rightEyeModelMtx = glm::scale(modelMtx, glm::vec3(0.4, 0.4, 0.4) );
-    rightEyeModelMtx = glm::translate( rightEyeModelMtx, glm::vec3( playerPos.x+4, playerPos.y+5, playerPos.z-4 ) );
-    rightEyeModelMtx = glm::rotate(rightEyeModelMtx, 2.5f, glm::vec3(1.0f, 1.0f, 1.0f));
-
-    computeAndSendMatrixUniforms(rightEyeModelMtx, viewMtx, projMtx);
-
-    CSCI441::drawSolidCone(2.0f, 4.0f, 1, 3);
-}
-void drawVoltorbLeftEye(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx){
-    glm::mat4 leftEyeModelMtx(1.0f);
-
-    if(playerMoving){
-        glm::vec3 bodyColor3( glm::vec3{0.0f,0.0f,1.0f});
-        glUniform3fv(lightingShaderUniforms.materialColor, 1, &bodyColor3[0]);
-    }else{
-        glm::vec3 bodyColor3( glm::vec3{1.0f,1.0f,1.0f});
-        glUniform3fv(lightingShaderUniforms.materialColor, 1, &bodyColor3[0]);
-    }
-
-    //put it in the correct place
-    leftEyeModelMtx = glm::scale(modelMtx, glm::vec3(0.4, 0.4, 0.4) );
-    leftEyeModelMtx = glm::translate( leftEyeModelMtx, glm::vec3( playerPos.x+4, playerPos.y+5, playerPos.z+4 ) );
-    leftEyeModelMtx = glm::rotate(leftEyeModelMtx, 2.5f, glm::vec3(1.0f, 1.0f, 1.0f));
-    leftEyeModelMtx = glm::rotate(leftEyeModelMtx, 2.7f, glm::vec3(1.0f, 0.0f, 0.0f));
-    leftEyeModelMtx = glm::rotate(leftEyeModelMtx, 6.8f, glm::vec3(0.0f, 0.0f, 1.0f));
-
-    computeAndSendMatrixUniforms(leftEyeModelMtx, viewMtx, projMtx);
-
-    CSCI441::drawSolidCone(2.0f, 4.0f, 1, 3);
-}
-void drawVoltorbLeftPupil(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
-    glm::mat4 leftPupilModelMtx(1.0f);
-
-    leftPupilModelMtx = glm::scale(modelMtx, glm::vec3(0.2, 0.4, 0.2) );
-    leftPupilModelMtx = glm::translate( leftPupilModelMtx, glm::vec3( playerPos.x+9, playerPos.y+6, playerPos.z+6 ) );
-
-    computeAndSendMatrixUniforms(leftPupilModelMtx, viewMtx, projMtx);
-
-    CSCI441::drawSolidSphere(1.0f, 10, 10);
-}
-void drawVoltorbRightPupil(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
-    glm::mat4 rightPupilModelMtx(1.0f);
-
-    glm::vec3 bodyColor3( glm::vec3{0.0f,0.0f,0.0f});
-    glUniform3fv(lightingShaderUniforms.materialColor, 1, &bodyColor3[0]);
-
-    //need to make this black and in the right place and also a left pupil
-    rightPupilModelMtx = glm::scale(modelMtx, glm::vec3(0.2, 0.4, 0.2) );
-    rightPupilModelMtx = glm::translate( rightPupilModelMtx, glm::vec3( playerPos.x+9, playerPos.y+6, playerPos.z-6 ) );
-
-    computeAndSendMatrixUniforms(rightPupilModelMtx, viewMtx, projMtx);
-
-    CSCI441::drawSolidSphere(1.0f, 10, 10);
-
-}
-void drawVoltorbBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
-    glm::mat4 topHemisphereModelMtx(1.0f);
-
-    //make sure to include the file C:\MinGW\include\CSCI441\Vlad_A2\include\CSCI441\objects.hpp
-    topHemisphereModelMtx = glm::translate( modelMtx, glm::vec3( playerPos.x, playerPos.y, playerPos.z ) );
-
-    computeAndSendMatrixUniforms(topHemisphereModelMtx, viewMtx, projMtx);
-
-}
-void drawVoltorb(glm::mat4 modelMtx,glm::mat4 viewMtx,glm::mat4 projectMtx){
-    // voltorb body
-    drawVoltorbBody(modelMtx, viewMtx, projectMtx);
-    //we still need the eyes
-    //right eye
-    drawVoltorbRightEye(modelMtx, viewMtx, projectMtx);
-    //left eye
-    drawVoltorbLeftEye(modelMtx, viewMtx, projectMtx);
-    //right pupil
-    drawVoltorbRightPupil(modelMtx, viewMtx, projectMtx);
-    //left pupil
-    drawVoltorbLeftPupil(modelMtx, viewMtx, projectMtx);
-}
-
+/// draw tree topper
 void drawTreeTopper(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     modelMtx = glm::translate(modelMtx, glm::vec3(-35.0f, 45.0f, -25.0f));
-    computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
-    glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
+    computeAndSendMatrixUniformsTree(modelMtx, viewMtx, projMtx);
+    glUniform3fv(treeTopperShaderUniforms.topperColor, 1, &topperColor[0]);
     CSCI441::drawSolidSphere(5.0f, 10, 10);
 }
 
+/// draw ornament functions
 void drawRedOrnamentTop(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     modelMtx = glm::translate(modelMtx, glm::vec3(0.3f, 9.8f, 10.0f));
     modelMtx = glm::scale(modelMtx, glm::vec3(1.0f, 1.0f, 1.0f));
@@ -1276,20 +952,16 @@ void drawGreenOrnamentSphere(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 pr
     glUniform3fv(lightingShaderUniforms.materialColor,1,&santaBodyColor[0]);
     CSCI441::drawSolidSphere(0.8f,10,10);
 }
+
 void drawGreenOrnament(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     drawGreenOrnamentTop(modelMtx,viewMtx,projMtx);
     drawGreenOrnamentSphere(modelMtx,viewMtx,projMtx);
 }
 
-void transposeFlake(glm::vec3 landingPosition, glm::mat4 viewMtx, glm::mat4 projMtx) {
-    // TODO transpose flake
-}
-
-void deleteFromVector(float targetZ)
-{
+/// ornament update functions
+void deleteFromVector(float targetZ) {
     // find the element
     auto iter = std::find_if(ornamentList.begin(), ornamentList.end(),[&](const ornament& p){return p.ornamentZ == targetZ;});
-
     // if found, erase it
     if ( iter != ornamentList.end())
         ornamentList.erase(iter);
@@ -1303,22 +975,42 @@ void updateOrnamentCoordinate(ornament& thisOrnament){
     }
 }
 
+/// move ground plane
+void generateRandomSnowflake(glm::vec3 landingPosition, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    int i = (getRand() * 25600) - 4;
+    groundQuad[i].displacement += 0.5;
+    groundQuad[i].displacement += 0.5;
+    groundQuad[i].displacement += 0.5;
+    groundQuad[i].displacement += 0.5;
+}
+
 // renderScene() ///////////////////////////////////////////////////////////////
 void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     // draw our grid
     lightingShader->useProgram();
     glUniform3fv(lightingShaderUniforms.camPosition,1,&camPos[0]);
 
-    //// BEGIN DRAWING THE GROUND PLANE ////
-    // draw the ground plane
-    glm::mat4 groundModelMtx = glm::scale( glm::mat4(1.0f), glm::vec3(quadSize,1.0f,quadSize));
-    computeAndSendMatrixUniforms(groundModelMtx, viewMtx, projMtx);
+    //// BEGIN DRAWING THE STATIC GROUND PLANE ////
+    glm::mat4 baseModelMtx = glm::scale( glm::mat4(1.0f), glm::vec3(80.0f,1.0f,80.0f));
+    computeAndSendMatrixUniforms(baseModelMtx, viewMtx, projMtx);
 
-    glm::vec3 groundColor(1.0f,1.0f,1.0f);
-    glUniform3fv(lightingShaderUniforms.materialColor, 1, &groundColor[0]);
+    glm::vec3 baseColor(0.74902, 0.847059, 0.847059);
+    glUniform3fv(lightingShaderUniforms.materialColor, 1, &baseColor[0]);
+
+    glBindVertexArray(baseVAO);
+    glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0);
+
+    //// BEGIN DRAWING THE DYNAMIC GROUND PLANE ////
+    displacementShaderProgram->useProgram();
+    computeAndSendMatrixUniformsDisplacement(glm::mat4(1.0f), viewMtx, projMtx);
 
     glBindVertexArray(groundVAO);
-    glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0);
+
+    glBindBuffer( GL_ARRAY_BUFFER, vbods[0] );
+    glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(groundQuad), groundQuad);
+
+    glDrawElements(GL_TRIANGLE_STRIP, numGroundPoints, GL_UNSIGNED_SHORT, (void*)0);
+
     //// END DRAWING THE GROUND PLANE ////
 
     /************************************** sky box drawing (each plane) **********************************************/
@@ -1367,8 +1059,7 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     lightingShader->useProgram();
 
-    // TODO Evil Santa
-    /// render scene
+    // draw evil santa
     glm::mat4 santaModelMtx(1.0f);
     santaModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(santaX,0.0f,santaZ));
     drawEvilSanta(santaModelMtx, viewMtx, projMtx);
@@ -1387,10 +1078,6 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
             drawGreenOrnament(o.modelMatrix, viewMtx, projMtx);
         }
         int tempNum = ornamentList.size();
-        //o.ornamentY += 1.0f;
-        //o.ornamentZ += 1.0f;
-
-        //updateOrnamentCoordinate(o);
     }
 
     glm::mat4 candleModelModelMtx(1.0f);
@@ -1403,19 +1090,6 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     jarrisonModelMtx = glm::translate( jarrisonModelMtx, glm::vec3( -jarrisonX, 0.0f, -jarrisonZ ) );
     drawJarrison(jarrisonModelMtx, viewMtx, projMtx);
 
-    /// draw voltorb
-    /*glm::mat4 voltorbModelMtx(1.0f);
-    voltorbModelMtx = glm::translate( glm::mat4(1.0f), glm::vec3( playerMove.x, playerMove.y, playerMove.z ) );
-    voltorbModelMtx = glm::rotate(voltorbModelMtx, -rotAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-    drawVoltorb(voltorbModelMtx, viewMtx, projMtx);*/
-
-    /// draw blossom
-    glm::mat4 drawBlossomModelMtx(1.0f);
-    drawBlossomModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(blossomX, 0.0f, blossomZ));
-    drawBlossomModelMtx = glm::rotate(drawBlossomModelMtx, blossomRotation, glm::vec3(0.0f,1.0f,0.0f));
-    drawBlossomModelMtx = glm::translate(drawBlossomModelMtx, glm::vec3(-blossomX,0.0f,-blossomZ));
-    /// drawBlossom(drawBlossomModelMtx,viewMtx,projMtx);
-
     // TODO Christmas Tree
     drawChristmasTree(christmasTree, viewMtx, projMtx);
     drawChristmasTreeTrunk(christmasTrunk, viewMtx, projMtx);
@@ -1424,12 +1098,6 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     for(CandyCanes c: candyCanes){
         drawCandyCane(c , viewMtx, projMtx);
     }
-
-    candleShader->useProgram();
-    glUniform3fv(candleShaderUniforms.camPos,1,&camPos[0]);
-
-    glm::mat4 candleModelMtx = glm::mat4(1.0f);
-    drawCandles(candleModelMtx,viewMtx,projMtx);
 
     lightingShader->useProgram();
 
@@ -1444,15 +1112,30 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     glBindVertexArray( vaos[VAOS.PARTICLE_SYSTEM] );
     glBindTexture(GL_TEXTURE_2D, spriteTextureHandle);
 
-    // TODO #1
+    // update snowflakes
     for(int i = 0; i < NUM_SPRITES; i++){
 
-        if(spriteLocations[ spriteIndices[i]].y <= 0){
-            // TODO transpose flake
-            glm::vec3 landingPosition = spriteLocations[ spriteIndices[i]];
-            transposeFlake(landingPosition, viewMtx, projMtx);
+        if(spriteLocations[ spriteIndices[i]].y <= 0) {
+            // reset flake y position
             spriteLocations[ spriteIndices[i]].y += MAX_BOX_SIZE;
-            // TODO move flake a lil'
+            // move flake a little, and do not let it go out of bounds
+            spriteLocations[ spriteIndices[i]].x += getRand();
+            spriteLocations[ spriteIndices[i]].z += getRand();
+            if (spriteLocations[ spriteIndices[i]].x >= MAX_BOX_SIZE) {
+                spriteLocations[ spriteIndices[i]].x -= 2;
+            }
+            else if (spriteLocations[ spriteIndices[i]].x <= 0) {
+                spriteLocations[ spriteIndices[i]].x += 2;
+            }
+            if (spriteLocations[ spriteIndices[i]].z >= MAX_BOX_SIZE) {
+                spriteLocations[ spriteIndices[i]].z -= 2;
+            }
+            else if (spriteLocations[ spriteIndices[i]].z <= 0) {
+                spriteLocations[ spriteIndices[i]].z += 2;
+            }
+            // record where flake landed for displacement mapping
+            glm::vec3 landingPosition = spriteLocations[ spriteIndices[i]];
+            generateRandomSnowflake(landingPosition, viewMtx, projMtx);
         }
         else {
             spriteLocations[ spriteIndices[i]].y -= 0.05;
@@ -1464,7 +1147,7 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
         distances[i] = dist;
     }
 
-    // TODO #2
+    // sort distance of snowflakes for proper rendering
     for(int i = 0; i < NUM_SPRITES - 1; i++){
         for(int j = 1; j < NUM_SPRITES; j++){
             if (distances[j - 1] > distances[j]){
@@ -1501,13 +1184,43 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     lightingShader->useProgram();
 
-    if(arcballCamActive){
-        glUniform3fv(candleShaderUniforms.camPos,1,&camPos[0]);
+    // adjust quadratic and linear values of the attenuation based on point light position
+    if (strobe) {
+        float x = rand() % 100;
+        float y = rand() % 100;
+        float z = rand() % 100;
+
+        glm::vec3 lightDirection = glm::vec3(-1, -1, 1);
+        glm::vec3 lightColor = glm::vec3(1, 1, 1);
+        glm::vec3 pointLightColor = glm::vec3(1, 1, 1);
+        // for point light
+        glm::vec3 lightPosition = glm::vec3(x, y, z);
+
+        glUniform3fv(lightingShaderUniforms.lightPosition, 1, &lightPosition[0]);
+
+        glUniform3fv(lightingShaderUniforms.lightDirection, 1, &lightDirection[0]);
+        glUniform3fv(lightingShaderUniforms.lightColor, 1, &lightColor[0]);
+        glUniform3fv(lightingShaderUniforms.pointLightColor, 1, &pointLightColor[0]);
+    }
+    // otherwise be normal
+    else {
+        glm::vec3 lightDirection = glm::vec3(-1, -1, 1);
+        glm::vec3 lightColor = glm::vec3(1, 1, 1);
+        glm::vec3 pointLightColor = glm::vec3(1, 1, 1);
+        // for point light
+        glm::vec3 lightPosition = glm::vec3(1, 1, 0);
+
+        glUniform3fv(lightingShaderUniforms.lightPosition, 1, &lightPosition[0]);
+
+        glUniform3fv(lightingShaderUniforms.lightDirection, 1, &lightDirection[0]);
+        glUniform3fv(lightingShaderUniforms.lightColor, 1, &lightColor[0]);
+        glUniform3fv(lightingShaderUniforms.pointLightColor, 1, &pointLightColor[0]);
     }
 }
 
 // make jarrisons eyes move
 void updateJarrisonAnimation() {
+    // clack those eyes
     if (eyesMovingInward) {
         if (currentEyeOffset >= MAX_EYE_OFFSET) {
             eyesMovingInward = false;
@@ -1521,32 +1234,41 @@ void updateJarrisonAnimation() {
             currentEyeOffset -= 0.03;
         }
     }
-}
-
-/*
-int attenuationCounter = 0;
-int attenuationIncrement = 1;
-float linearValues[12] = {0.7f, 0.35f, 0.22f, 0.14f, 0.09f, 0.07f, 0.045f, 0.027f, 0.022f, 0.014f, 0.007f, 0.0014f};
-float quadraticValues[12] = {1.8f, 0.44f, 0.2f, 0.07f, 0.032f, 0.017f, 0.0075f, 0.0028f, 0.0019f, 0.0007f, 0.0002f, 0.000007f};
-int length = sizeof(linearValues)/sizeof(linearValues[0]);
-void updateCandleAttenuation(){
-    if(attenuationCounter==(length-1) || attenuationCounter==(0)){
-        //change
-        glm::vec3 newAttenuation = glm::vec3{1.0f,linearValues[attenuationCounter],quadraticValues[attenuationCounter]};
-        attenuationIncrement*= -1;
-
-
-        glUniform3fv(candleShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
-        glUniform3fv(lightingShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
-    }else{
-        glm::vec3 newAttenuation = glm::vec3{1.0f,linearValues[attenuationCounter],quadraticValues[attenuationCounter]};
-        glUniform3fv(candleShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
-        glUniform3fv(lightingShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
+    // if ornament is above jarrison, he jumps because he v scared
+    if (!jarrisonJumping and !jarrisonComingDown) {
+        for (int i = 0; i < ornamentList.size(); i++) {
+            float ornamentX = ornamentList[i].ornamentX;
+            float ornamentZ = ornamentList[i].ornamentZ;
+            if (abs(ornamentX - jarrisonX <= 1) and abs(ornamentZ - jarrisonZ <= 1)) {
+                jarrisonJumping = true;
+                jarrisonComingDown = false;
+                break;
+            }
+        }
+    }
+    else {
+        if (!jarrisonComingDown) {
+            if (jarrisonY < 6) {
+                jarrisonY += 0.4;
+            }
+            else {
+                jarrisonComingDown = true;
+            }
+        }
+        else {
+            if (jarrisonY > 1.5) {
+                jarrisonY -= 0.4;
+            }
+            else {
+                jarrisonJumping = false;
+                jarrisonComingDown = false;
+            }
+        }
     }
 
-    attenuationCounter += attenuationIncrement;
 }
-*/
+
+// update santa movement
 void updateSantaDirection(){
     if(santaMoveRight){
         if (santaX < 65){
@@ -1637,10 +1359,11 @@ GLFWwindow* setupGLFW() {
     return window;						                     // return the window that was created
 }
 
+// set up shaders
 void setupShaders() {
+    // main lighting shader
     lightingShader = new CSCI441::ShaderProgram( "shaders/midterm.v.glsl", "shaders/midterm.f.glsl" );
     lightingShaderUniforms.mvpMatrix      = lightingShader->getUniformLocation("mvpMatrix");
-    // TODO #3 assign the uniform and attribute locations
     lightingShaderUniforms.materialColor  = lightingShader->getUniformLocation("materialColor");
     lightingShaderUniforms.normalMatrix   = lightingShader->getUniformLocation("normalMatrix");
     lightingShaderUniforms.lightDirection = lightingShader->getUniformLocation("lightDirection");
@@ -1650,13 +1373,12 @@ void setupShaders() {
     lightingShaderAttributes.vPos         = lightingShader->getAttributeLocation("vPos");
     lightingShaderAttributes.vertexNormal = lightingShader->getAttributeLocation("vertexNormal");
     lightingShaderUniforms.camPosition         = lightingShader->getUniformLocation("camPosition");
-    //lightingShaderUniforms.attenuationChange         = lightingShader->getUniformLocation("attenuationChange");//remove
-
     lightingShaderUniforms.spotLightTheta   = lightingShader->getUniformLocation("spotLightTheta");
     lightingShaderUniforms.spotLightPosition = lightingShader->getUniformLocation("spotLightPosition");
     lightingShaderUniforms.spotLightDirection = lightingShader->getUniformLocation("spotLightDirection");
     lightingShaderUniforms.spotLightColor     = lightingShader->getUniformLocation("spotLightColor");
 
+    // billboarding shader for particles
     billboardShaderProgram = new CSCI441::ShaderProgram( "shaders/billboardQuadShader.v.glsl",
                                                          "shaders/billboardQuadShader.g.glsl",
                                                          "shaders/billboardQuadShader.f.glsl" );
@@ -1664,10 +1386,10 @@ void setupShaders() {
     billboardShaderProgramUniforms.projMatrix = billboardShaderProgram->getUniformLocation( "projMatrix");
     billboardShaderProgramUniforms.image = billboardShaderProgram->getUniformLocation( "image");
     billboardShaderProgramAttributes.vPos = billboardShaderProgram->getAttributeLocation( "vPos");
-
     billboardShaderProgram->useProgram();
     glUniform1i(billboardShaderProgramUniforms.image, 0);
 
+    // texture shader for skybox
     texShaderProgram = new CSCI441::ShaderProgram("shaders/texShader.v.glsl","shaders/texShader.f.glsl");
     texShaderProgramUniforms.mvpMatrix = texShaderProgram->getUniformLocation("mvpMatrix");
     texShaderProgramUniforms.textureMap = texShaderProgram->getUniformLocation("textureMap");
@@ -1675,53 +1397,27 @@ void setupShaders() {
     texShaderProgramAttributes.vTexCoord = texShaderProgram->getAttributeLocation("vTexCoord");
     glUniform1i(texShaderProgramUniforms.textureMap,0);
 
+    // tree topper shader for color-changing tree topper
     treeTopperShaderProgram = new CSCI441::ShaderProgram("shaders/treeTopper.v.glsl", "shaders/treeTopper.f.glsl");
-    treeTopperShaderProgramUniforms.mvpMatrix = treeTopperShaderProgram->getUniformLocation("mvpMatrix");
-    treeTopperShaderProgramUniforms.topperColor = treeTopperShaderProgram->getUniformLocation("topperColor");
+    treeTopperShaderUniforms.mvpMatrix = treeTopperShaderProgram->getUniformLocation("mvpMatrix");
+    treeTopperShaderUniforms.topperColor = treeTopperShaderProgram->getUniformLocation("topperColor");
     treeTopperShaderProgramAttributes.vPos = treeTopperShaderProgram->getAttributeLocation("vPos");
 
-    //candleShader->useProgram();
-
-    candleShader = new CSCI441::ShaderProgram("shaders/candleShader.v.glsl", "shaders/candleShader.f.glsl");
-    candleShaderUniforms.mvpMtx = candleShader->getUniformLocation("mvpMtx");
-    candleShaderUniforms.normalMtx = candleShader->getUniformLocation("normalMtx");
-    //candleShaderUniforms.modelMtx = candleShader->getUniformLocation("modelMtx");
-    candleShaderUniforms.lightPositionPoint = candleShader->getUniformLocation("lightPositionPoint");
-    candleShaderUniforms.lightColorPoint = candleShader->getUniformLocation("lightColorPoint");
-    candleShaderUniforms.lightDirection = candleShader->getUniformLocation("lightDirection");
-    candleShaderUniforms.materialColor  = candleShader->getUniformLocation("materialColor");
-    candleShaderUniforms.camPos = candleShader->getUniformLocation("camPos");
-    //candleShaderUniforms.attenuationChange = candleShader->getUniformLocation("attenuationChange");
-
-    candleShaderAttributes.vPos = candleShader->getAttributeLocation("vPos");
-    candleShaderAttributes.vNormal = candleShader->getAttributeLocation("vNormal");
-
+    // displacement shader program for snow accumulation on ground plane
+    displacementShaderProgram = new CSCI441::ShaderProgram("shaders/snowDisplacementShader.v.glsl", "shaders/snowDisplacementShader.f.glsl");
+    displacementShaderUniforms.mvpMatrix = displacementShaderProgram->getUniformLocation("mvpMatrix");
+    displacementShaderAttributes.vPos = displacementShaderProgram->getAttributeLocation("vPos");
+    displacementShaderAttributes.vNormal = displacementShaderProgram->getAttributeLocation("vNormal");
+    displacementShaderAttributes.vDisplacement = displacementShaderProgram->getAttributeLocation("vDisplacement");
 }
 
 void setupBuffers() {
-
-    /// ground
-    struct VertexNormal {
-        GLfloat x, y, z;
-        GLfloat xNorm, yNorm, zNorm;
-    };
-
-    VertexNormal groundQuad[4] = {
-            {-1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f},
-            {1.0f,  0.0f, -1.0f, 0.0f, 1.0f, 0.0f},
-            {-1.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f},
-            {1.0f,  0.0f, 1.0f,  0.0f, 1.0f, 0.0f}
-    };
-
-    GLushort indices[4] = {0, 1, 2, 3};
-
-    /// sprite
+    /// sprite VAOs VBOs and IBOs
     glGenVertexArrays(NUM_VAOS, vaos);
     glGenBuffers(NUM_VAOS, vbos);
     glGenBuffers(NUM_VAOS, ibos);
 
-    // --------------------------------------------------------------------------------------------------
-    // LOOKHERE #2 - generate sprites
+    /// generate sprites
 
     spriteLocations = (glm::vec3 *) malloc(sizeof(glm::vec3) * NUM_SPRITES);
     spriteIndices = (GLushort *) malloc(sizeof(GLushort) * NUM_SPRITES);
@@ -1745,27 +1441,37 @@ void setupBuffers() {
 
     fprintf(stdout, "[INFO]: point sprites read in with VAO/VBO/IBO %d/%d/%d\n", vaos[VAOS.PARTICLE_SYSTEM],
             vbos[VAOS.PARTICLE_SYSTEM], ibos[VAOS.PARTICLE_SYSTEM]);
+
     /// end sprite
 
-    ////////////////////////////////////
-    glEnableVertexAttribArray(candleShaderAttributes.vPos);
-    glVertexAttribPointer(candleShaderAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void*)0);
-
-    glEnableVertexAttribArray(candleShaderAttributes.vNormal);
-    glVertexAttribPointer(candleShaderAttributes.vNormal, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
     /////////////////////////////////
 
     /// send tree topper vPos
     glEnableVertexAttribArray(treeTopperShaderProgramAttributes.vPos);
     glVertexAttribPointer(treeTopperShaderProgramAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
 
-    glGenVertexArrays(1, &groundVAO);
-    glBindVertexArray(groundVAO);
+    fprintf(stdout, "[INFO]: sprites read in with VAO %d\n", vaos[VAOS.PARTICLE_SYSTEM]);
 
-    GLuint vbods[2];       // 0 - VBO, 1 - IBO
-    glGenBuffers(2, vbods);
-    glBindBuffer(GL_ARRAY_BUFFER, vbods[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(groundQuad), groundQuad, GL_STATIC_DRAW);
+    /// static ground base
+
+    VertexNormal baseQuad[4] = {
+            {-1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+            {1.0f,  -1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+            {-1.0f, -1.0f, 1.0f,  0.0f, 1.0f, 0.0f},
+            {1.0f,  -1.0f, 1.0f,  0.0f, 1.0f, 0.0f}
+    };
+
+    GLushort baseIndices[4] = {0, 1, 2, 3};
+
+    glEnableVertexAttribArray(lightingShaderAttributes.vPos);
+    glVertexAttribPointer(lightingShaderAttributes.vPos, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
+
+    glGenVertexArrays(1, &baseVAO);
+    glBindVertexArray(baseVAO);
+
+    glGenBuffers(2, baseVBOS);
+    glBindBuffer(GL_ARRAY_BUFFER, baseVBOS[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(baseQuad), baseQuad, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(lightingShaderAttributes.vPos);
     glVertexAttribPointer(lightingShaderAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void *) 0);
@@ -1774,12 +1480,52 @@ void setupBuffers() {
     glVertexAttribPointer(lightingShaderAttributes.vertexNormal, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal),
                           (void *) (3 * sizeof(float)));
 
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, baseVBOS[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(baseIndices), baseIndices, GL_STATIC_DRAW);
+
+    fprintf(stdout, "[INFO]: base quad read in with VAO %d\n", baseVAO);
+
+    /// dynamic ground
+    int index = 0;
+    for (int i = 0; i < MAX_BOX_SIZE * 2; i+=2) {
+        for (int j = 0; j < MAX_BOX_SIZE * 2; j+=2) {
+            groundQuad[index] = {MAX_BOX_SIZE - i, 0.0f, MAX_BOX_SIZE - j, 0.0f, 1.0f, 0.0f, 0.0f};
+            groundQuad[index + 1] = {MAX_BOX_SIZE - i - 2, 0.0f, MAX_BOX_SIZE - j, 0.0f, 1.0f, 0.0f, 0.0f};
+            groundQuad[index + 2] = {MAX_BOX_SIZE - i, 0.0f, MAX_BOX_SIZE - j - 2, 0.0f, 1.0f, 0.0f, 0.0f};
+            groundQuad[index + 3] = {MAX_BOX_SIZE - i - 2, 0.0f, MAX_BOX_SIZE - j - 2, 0.0f, 1.0f, 0.0f, 0.0f};
+            index += 4;
+        }
+    }
+
+    GLushort indices[numGroundPoints];
+    for (int i = 0; i < numGroundPoints; i++) indices[i] = i;
+
+    glGenVertexArrays(1, &groundVAO);
+    glBindVertexArray(groundVAO);
+
+    glGenBuffers(2, vbods);
+    glBindBuffer(GL_ARRAY_BUFFER, vbods[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(groundQuad), groundQuad, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(displacementShaderAttributes.vNormal);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbods[1]);
+
+    glEnableVertexAttribArray(displacementShaderAttributes.vPos);
+    glVertexAttribPointer(displacementShaderAttributes.vPos, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void *) 0);
+
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glVertexAttribPointer(displacementShaderAttributes.vNormal, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormal),
+                          (void *) (3 * sizeof(float)));
+
+    glEnableVertexAttribArray(displacementShaderAttributes.vDisplacement);
+    glVertexAttribPointer(displacementShaderAttributes.vDisplacement, 1, GL_FLOAT, GL_FALSE, sizeof(VertexNormal), (void *) (6 * sizeof(float)));
+
+    fprintf(stdout, "[INFO]: dynamic ground read in with VAO %d\n", groundVAO);
 
     ////////////////////////////////////////////////// left plane /////////////////////////////////////////////////////
 
-    struct VertexTextured { /// struct for drawing each plane of our skybox
+    /// struct for drawing each plane of our skybox
+    struct VertexTextured {
         float x, y, z;
         float s, t;
     };
@@ -1937,7 +1683,6 @@ void setupBuffers() {
 
     fprintf(stdout, "[INFO]: platform read in with VAO %d\n", topVAO);
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 }
 
 void setupOpenGL() {
@@ -1959,6 +1704,64 @@ void setupOpenGL() {
     glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );	// set the clear color to black
 }
 
+void setupScene() {
+    // give the camera a scenic starting point.
+    camPos.x = 60;
+    camPos.y = 40;
+    camPos.z = 30;
+
+    float light_cutoff = glm::radians(0.785f);
+
+    // configure arcball camera
+    cameraTheta = M_PI / 3.0;
+    cameraPhi = M_PI / 1.6;
+    updateArcballCamera();
+
+    // configure free cam
+    freeCamAngles = glm::vec3(-M_PI / 3.0f, M_PI / 2.8f, 1.0f);
+    freeCamSpeed = glm::vec2(0.40f, 0.15f);
+
+    srand(time(nullptr));    // seed our random number generator
+    generateEnvironment();
+
+    treeTopperShaderProgram->useProgram();
+    // send tree topper color data
+    topperColor = glm::vec3(0.5, 0.5, 0.5);
+    glUniform3fv(treeTopperShaderUniforms.topperColor, 1, &topperColor[0]);
+
+    lightingShader->useProgram();           // use our lighting shader program so when
+    // assign uniforms, they get sent to this shader
+
+    // set the light direction and color
+    glm::vec3 lightDirection = glm::vec3(-1, -1, 1);
+    glm::vec3 lightColor = glm::vec3(1, 1, 1);
+    glm::vec3 pointLightColor = glm::vec3(0, 0,1);
+    // for point light
+    glm::vec3 lightPosition = glm::vec3(1, 1, 0);
+    glUniform3fv(lightingShaderUniforms.lightPosition, 1, &lightPosition[0]);
+
+    glUniform3fv(lightingShaderUniforms.lightDirection, 1, &lightDirection[0]);
+    glUniform3fv(lightingShaderUniforms.lightColor, 1, &lightColor[0]);
+    glUniform3fv(lightingShaderUniforms.pointLightColor, 1, &pointLightColor[0]);
+
+    // SPOT LIGHT VARIABLES
+    // for spot light
+    GLfloat spotLightTheta = 0.17f;
+    glUniform1f(lightingShaderUniforms.spotLightTheta, spotLightTheta);
+
+    glm::vec3 spotLightPosition = glm::vec3(1, 5, 0);
+    glm::vec3 spotLightDirection = glm::vec3(0, -1, 0);
+    glm::vec3 spotLightColor = glm::vec3(0, 0, 1);
+
+    glUniform3fv(lightingShaderUniforms.spotLightPosition, 1, &spotLightPosition[0]);
+    glUniform3fv(lightingShaderUniforms.spotLightDirection, 1, &spotLightDirection[0]);
+    glUniform3fv(lightingShaderUniforms.spotLightColor, 1, &spotLightColor[0]);
+
+    lightingShader->useProgram();
+}
+
+/// update functions
+
 void setTreeTopperColor(glm::vec3 &color) {
     if (getRand() < 0.5) color.r += 0.01;
     else color.r -= 0.01;
@@ -1976,100 +1779,11 @@ void setTreeTopperColor(glm::vec3 &color) {
     if (color.g < 0.0f) color.g = 0.0f;
 }
 
-void setupScene() {
-    // give the camera a scenic starting point.
-    camPos.x = 60;
-    camPos.y = 40;
-    camPos.z = 30;
-
-    //give the voltorb a default start point
-    playerPos.x = 0;
-    playerPos.y = 2;
-    playerPos.z = 0;
-
-    //keep track of voltorb movement
-    playerMove.x = 0;
-    playerMove.y = 0;
-    playerMove.z = 0;
-
-    float light_cutoff = glm::radians(0.785f);
-    //glUniform1f(candleShaderUniforms.cutoffSpotLight, light_cutoff);
-
-    // configure arcball camera
-    cameraTheta = M_PI / 3.0;
-    cameraPhi = M_PI / 1.6;
-    updateArcballCamera();
-
-    // configure free cam
-    freeCamAngles = glm::vec3(-M_PI / 3.0f, M_PI / 2.8f, 1.0f);
-    freeCamSpeed = glm::vec2(0.25f, 0.02f);
-
-    srand(time(nullptr));    // seed our random number generator
-    generateEnvironment();
-
-    treeTopperShaderProgram->useProgram();
-    // send tree topper color data
-
-    topperColor = glm::vec3(0.5, 0.5, 0.5);
-    glUniform3fv(treeTopperShaderProgramUniforms.topperColor, 1, &topperColor[0]);
-
-    lightingShader->useProgram();           // use our lighting shader program so when
-    // assign uniforms, they get sent to this shader
-
-    // TODO #4 set the light direction and color
-    glm::vec3 lightDirection = glm::vec3(-1, -1, 1);
-    glm::vec3 lightColor = glm::vec3(1, 1, 1);
-    glm::vec3 pointLightColor = glm::vec3(0, 0,1);
-    // for point light
-    glm::vec3 lightPosition = glm::vec3(rand() % 10, rand() % 10, 0);
-    glUniform3fv(lightingShaderUniforms.lightPosition, 1, &lightPosition[0]);
-
-    glUniform3fv(lightingShaderUniforms.lightDirection, 1, &lightDirection[0]);
-    glUniform3fv(lightingShaderUniforms.lightColor, 1, &lightColor[0]);
-    glUniform3fv(lightingShaderUniforms.pointLightColor, 1, &pointLightColor[0]);
-
-    //glm::vec3 attenuationChange = glm::vec3(1.0f, 0.14f, 0.007f);//remove
-
-    //glUniform3fv(lightingShaderUniforms.attenuationChange, 1, &lightPosition[0]);//remove
-
-    // SPOT LIGHT VARIABLES
-    // for spot light
-    GLfloat spotLightTheta = 0.17f;
-    glUniform1f(lightingShaderUniforms.spotLightTheta, spotLightTheta);
-
-    glm::vec3 spotLightPosition = glm::vec3(1, 5, 0);
-    glm::vec3 spotLightDirection = glm::vec3(0, -1, 0);
-    glm::vec3 spotLightColor = glm::vec3(0, 0, 1);
-
-    glUniform3fv(lightingShaderUniforms.spotLightPosition, 1, &spotLightPosition[0]);
-    glUniform3fv(lightingShaderUniforms.spotLightDirection, 1, &spotLightDirection[0]);
-    glUniform3fv(lightingShaderUniforms.spotLightColor, 1, &spotLightColor[0]);
-
-    /////////////////////////////////////////////
-    candleShader->useProgram();
-
-    //glm::vec3 lightPoint = glm::vec3(-55.0, 5.0, -55.0);
-    glm::vec3 candleLightPos = glm::vec3(10.0,9.0,10.0);
-    glm::vec3 candleLightColor = glm::vec3(1,0,0);
-    glm::vec3 candleLightDirection = glm::vec3(-1, -1, 1);
-    //glm::vec3 candleLightAttenuation = glm::vec3(1.0f,0.14f,0.007f);
-
-    glUniform3fv(candleShaderUniforms.lightPositionPoint, 1, &candleLightPos[0]);
-    glUniform3fv(candleShaderUniforms.lightColorPoint, 1, &candleLightColor[0]);
-    glUniform3fv(candleShaderUniforms.camPos, 1, &camPos[0]);
-    glUniform3fv(candleShaderUniforms.lightDirection, 1, &candleLightDirection[0]);
-    //glUniform3fv(candleShaderUniforms.attenuationChange, 1, &candleLightAttenuation[0]);
-
-    lightingShader->useProgram();
-
-
-}
-
-
 void updateScene() {
     setTreeTopperColor(topperColor);
 }
 
+/// set up textures
 void setupTextures() {
     // LOOKHERE #4
     spriteTextureHandle = CSCI441::TextureUtils::loadAndRegisterTexture("assets/textures/snowflake.png");
@@ -2095,18 +1809,15 @@ int main() {
     setupTextures();
     setupScene();
 
-    // TODO #5 connect the CSCI441 objects library to our shader attribute inputs
     // needed to connect our 3D Object Library to our shader
 
     CSCI441::setVertexAttributeLocations( lightingShaderAttributes.vPos, lightingShaderAttributes.vertexNormal);
 
     printf("Controls:\n");
     printf("\tWASD - Move Jarrison\n");
-    printf("\tTFGH - Move Voltorb\n");
-    printf("\tIJKL - Move Blossom\n");
-    printf("\tC - Switch between characters\n");
     printf("\t1 - Switch between free cam and arcball cam\n");
     printf("\tX - Move backward in free cam\n");\
+    printf("\tV- Strobe effect toggle\n");
     printf("\tSpace Bar - Move forward in free cam\n");
     printf("\tArrow Keys - Move free cam around\n");
     printf("\tLeft Click and move mouse - Move arcball around\n");
@@ -2136,7 +1847,6 @@ int main() {
         // i.e. what gets seen - use a perspective projection that ranges
         // with a FOV of 45 degrees, for our current aspect ratio, and Z ranges from [0.001, 1000].
         glm::mat4 projMtx = glm::perspective( 45.0f, (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.001f, 1000.0f );
-        //CSCI441::SimpleShader3::setProjectionMatrix(projMtx);
 
         // set up our look at matrix to position our camera
         glm::mat4 viewMtx;
@@ -2146,7 +1856,8 @@ int main() {
                                   arcballLookAtPoint,
                                   glm::vec3(0, 1, 0));
         }
-            // free camera
+
+        // free camera
         else if (freeCamActive) {
             viewMtx = glm::lookAt(freeCamPos,
                                   freeCamPos + freeCamDir,
@@ -2175,18 +1886,11 @@ int main() {
 
         updateJarrisonAnimation();
         updateSantaDirection();
-        candleShader->useProgram();
-        //updateCandleAttenuation();
         lightingShader->useProgram();
         for(ornament& o : ornamentList){
             updateOrnamentCoordinate(o);
-            //cout << "Ornament x: " << o.ornamentX << " Ornament y: " << o.ornamentY << " Ornament z: " << o.ornamentZ << endl << endl;
         }
 
-        // the following code is a hack for OSX Mojave
-        // the window is initially black until it is moved
-        // so instead of having the user manually move the window,
-        // we'll automatically move it and then move it back
         if( !mackHack ) {
             GLint xPos, yPos;
             glfwGetWindowPos(window, &xPos, &yPos);

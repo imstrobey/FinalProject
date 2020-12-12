@@ -32,8 +32,9 @@ in vec3 vertexNormal;
 layout(location = 0) out vec3 color;    // color to apply to this vertex
 
 void main() {
+
     // transform & output the vertex in clip space
-    gl_Position = mvpMatrix * vec4(vPos, 1.0);
+
 
     // TODO #B convert the light direction to our normalized light vector
     vec3 lightVec = normalize(-1 * lightDirection);
@@ -96,8 +97,21 @@ void main() {
     float constant = 1.0f;
     float linear = 0.1f;
     float quadratic = 0.032f;
+    //float linear = 0.14f;
+    //float quadratic = 0.007f;
+
+
 
     float pointDistance = length(lightPosition - vPos);
+
+    if(pointDistance<2.0){
+        quadratic = pow(quadratic, 2);
+        linear = linear * 2;
+    }else if(pointDistance<5.0 ){
+        quadratic = pow(quadratic, 30);
+        linear = linear * 30;
+    }
+
     float pointAttenuation = 1.0f / (constant + linear * pointDistance + quadratic * (pointDistance * pointDistance));
 
     pointDiffuse *= pointAttenuation;
@@ -121,4 +135,5 @@ void main() {
 
     //color = pointDiffuse;
     color = directionalDiffuse + directionalSpecular + pointDiffuse + pointSpecular + ambient + 10 * (spotDiffuse + spotSpecular);
+    gl_Position = mvpMatrix * vec4(vPos, 1.0);
 }
