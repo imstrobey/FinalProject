@@ -31,6 +31,7 @@
 // include environment objects
 #include <CSCI441/ShaderProgram.hpp>
 #include <CSCI441/TextureUtils.hpp>     // convenience for loading textures
+#include <algorithm>
 
 //*************************************************************************************
 //
@@ -78,6 +79,14 @@ struct CandyCanes {                     // keeps track of an individual bush's a
     glm::vec3 color;                // bush color
 };
 std::vector<CandyCanes> candyCanes;         // list of bushes
+
+// TODO oranment struct
+struct ornament {                     // keeps track of an individual ornament's attributes
+    glm::mat4 modelMatrix;          // position and size of ornament
+    float ornamentX, ornamentY, ornamentZ; //coordinates of the ornament
+    bool color; //keep track of the color of the ornament
+};
+std::vector<ornament> ornamentList;         // list of ornaments
 
 // TODO Christmas Tree
 struct ChristmasTree {
@@ -155,6 +164,7 @@ struct CandleShaderUniforms {
     GLint lightDirection;
     GLint materialColor;
     GLint camPos;
+    GLint attenuationChange;
 
 } candleShaderUniforms;
 struct CandleShaderAttributes {
@@ -1274,6 +1284,23 @@ void transposeFlake(glm::vec3 landingPosition, glm::mat4 viewMtx, glm::mat4 proj
     // TODO transpose flake
 }
 
+void deleteFromVector(float targetZ)
+{
+    // find the element
+    auto iter = std::find_if(ornamentList.begin(), ornamentList.end(),[&](const ornament& p){return p.ornamentZ == targetZ;});
+
+    // if found, erase it
+    if ( iter != ornamentList.end())
+        ornamentList.erase(iter);
+}
+
+void updateOrnamentCoordinate(ornament& thisOrnament){
+    thisOrnament.ornamentZ-=1.0f;
+    //delete the ornament if the coordinate is out of bounds
+    if(thisOrnament.ornamentZ<-94){
+        deleteFromVector(thisOrnament.ornamentZ);
+    }
+}
 
 // renderScene() ///////////////////////////////////////////////////////////////
 void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -1345,12 +1372,25 @@ void renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) {
     santaModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(santaX,0.0f,santaZ));
     drawEvilSanta(santaModelMtx, viewMtx, projMtx);
 
-    glm::mat4 redOrnamentModelMtx(1.0f);
-    glm::mat4 greenOrnamentModelMtx(1.0f);
-    drawRedOrnament(redOrnamentModelMtx, viewMtx, projMtx);
+    //update the coordinates of each ornament
+    for(ornament o : ornamentList){
+        if(o.color==true){
+            //draw red ornament
+            o.modelMatrix = glm::translate( o.modelMatrix, glm::vec3( o.ornamentX, o.ornamentY, o.ornamentZ ) );
+            o.modelMatrix = glm::scale( o.modelMatrix, glm::vec3(2.0f,2.0f,2.0f));
+            drawRedOrnament(o.modelMatrix, viewMtx, projMtx);
+        }else{
+            //draw green ornament
+            o.modelMatrix = glm::translate( o.modelMatrix, glm::vec3( o.ornamentX, o.ornamentY, o.ornamentZ ) );
+            o.modelMatrix = glm::scale( o.modelMatrix, glm::vec3(2.0f,2.0f,2.0f));
+            drawGreenOrnament(o.modelMatrix, viewMtx, projMtx);
+        }
+        int tempNum = ornamentList.size();
+        //o.ornamentY += 1.0f;
+        //o.ornamentZ += 1.0f;
 
-    greenOrnamentModelMtx = glm::translate(greenOrnamentModelMtx, glm::vec3(0.3f, 13.0f, 10.0f));
-    drawGreenOrnament(greenOrnamentModelMtx, viewMtx, projMtx);
+        //updateOrnamentCoordinate(o);
+    }
 
     glm::mat4 candleModelModelMtx(1.0f);
     drawCandleModel(candleModelModelMtx, viewMtx, projMtx);
@@ -1481,6 +1521,26 @@ void updateJarrisonAnimation() {
         }
     }
 }
+int attenuationCounter = 0;
+int attenuationIncrement = 1;
+float linearValues[12] = {0.7f, 0.35f, 0.22f, 0.14f, 0.09f, 0.07f, 0.045f, 0.027f, 0.022f, 0.014f, 0.007f, 0.0014f};
+float quadraticValues[12] = {1.8f, 0.44f, 0.2f, 0.07f, 0.032f, 0.017f, 0.0075f, 0.0028f, 0.0019f, 0.0007f, 0.0002f, 0.000007f};
+int length = sizeof(linearValues)/sizeof(linearValues[0]);
+void updateCandleAttenuation(){
+    if(attenuationCounter==(length-1) || attenuationCounter==(0)){
+        //change
+        glm::vec3 newAttenuation = glm::vec3{1.0f,linearValues[attenuationCounter],quadraticValues[attenuationCounter]};
+        attenuationIncrement*= -1;
+
+
+        glUniform3fv(candleShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
+    }else{
+        glm::vec3 newAttenuation = glm::vec3{1.0f,linearValues[attenuationCounter],quadraticValues[attenuationCounter]};
+        glUniform3fv(candleShaderUniforms.attenuationChange, 1, &newAttenuation[0]);
+    }
+
+    attenuationCounter += attenuationIncrement;
+}
 
 void updateSantaDirection(){
     if(santaMoveRight){
@@ -1501,6 +1561,31 @@ void updateSantaDirection(){
             santaX += 0.75;
         }
     }
+
+    //generate an ornament at certain locations of santa
+    if( santaX == 60 || santaX == 9 || santaX == -48 ) {
+        //generate a new ornament
+        ornament newOrnament;
+        newOrnament.ornamentX = santaX; //we need to adjust this so it comes out of the bazooka instead but yea
+        newOrnament.ornamentY = santaY; //we need to adjust this so it comes out of the bazooka instead but yea
+        newOrnament.ornamentZ = santaZ; //we need to adjust this so it comes out of the bazooka instead but yea
+
+        glm::mat4 ornamentModelMtx(1.0f);
+
+        newOrnament.modelMatrix = ornamentModelMtx;
+
+        int randomColor = rand() % 2 + 1;
+
+        if (randomColor == 1) {
+            newOrnament.color = true;
+        } else {
+            newOrnament.color = false;
+        }
+
+        //add it to the list of ornaments
+        ornamentList.push_back(newOrnament);
+    }
+
 }
 
 //*************************************************************************************
@@ -1589,6 +1674,8 @@ void setupShaders() {
     treeTopperShaderProgramUniforms.topperColor = treeTopperShaderProgram->getUniformLocation("topperColor");
     treeTopperShaderProgramAttributes.vPos = treeTopperShaderProgram->getAttributeLocation("vPos");
 
+    //candleShader->useProgram();
+
     candleShader = new CSCI441::ShaderProgram("shaders/candleShader.v.glsl", "shaders/candleShader.f.glsl");
     candleShaderUniforms.mvpMtx = candleShader->getUniformLocation("mvpMtx");
     candleShaderUniforms.normalMtx = candleShader->getUniformLocation("normalMtx");
@@ -1598,9 +1685,11 @@ void setupShaders() {
     candleShaderUniforms.lightDirection = candleShader->getUniformLocation("lightDirection");
     candleShaderUniforms.materialColor  = candleShader->getUniformLocation("materialColor");
     candleShaderUniforms.camPos = candleShader->getUniformLocation("camPos");
+    candleShaderUniforms.attenuationChange = candleShader->getUniformLocation("attenuationChange");
 
     candleShaderAttributes.vPos = candleShader->getAttributeLocation("vPos");
     candleShaderAttributes.vNormal = candleShader->getAttributeLocation("vNormal");
+
 }
 
 void setupBuffers() {
@@ -1924,7 +2013,7 @@ void setupScene() {
     // TODO #4 set the light direction and color
     glm::vec3 lightDirection = glm::vec3(-1, -1, 1);
     glm::vec3 lightColor = glm::vec3(1, 1, 1);
-    glm::vec3 pointLightColor = glm::vec3(1, 1,1);
+    glm::vec3 pointLightColor = glm::vec3(0, 0,1);
     // for point light
     glm::vec3 lightPosition = glm::vec3(1, 1, 0);
     glUniform3fv(lightingShaderUniforms.lightPosition, 1, &lightPosition[0]);
@@ -1951,16 +2040,21 @@ void setupScene() {
 
     //glm::vec3 lightPoint = glm::vec3(-55.0, 5.0, -55.0);
     glm::vec3 candleLightPos = glm::vec3(10.0,9.0,10.0);
-    glm::vec3 candleLightColor = glm::vec3(0,0,1);
-    glm::vec3 candleLightDirection = glm::vec3(0,1,0);
+    glm::vec3 candleLightColor = glm::vec3(1,0,0);
+    glm::vec3 candleLightDirection = glm::vec3(-1, -1, 1);
+    glm::vec3 candleLightAttenuation = glm::vec3(1.0f,0.14f,0.007f);
 
     glUniform3fv(candleShaderUniforms.lightPositionPoint, 1, &candleLightPos[0]);
     glUniform3fv(candleShaderUniforms.lightColorPoint, 1, &candleLightColor[0]);
     glUniform3fv(candleShaderUniforms.camPos, 1, &camPos[0]);
     glUniform3fv(candleShaderUniforms.lightDirection, 1, &candleLightDirection[0]);
+    glUniform3fv(candleShaderUniforms.attenuationChange, 1, &candleLightAttenuation[0]);
 
     lightingShader->useProgram();
+
+
 }
+
 
 void updateScene() {
     setTreeTopperColor(topperColor);
@@ -2071,6 +2165,13 @@ int main() {
 
         updateJarrisonAnimation();
         updateSantaDirection();
+        candleShader->useProgram();
+        updateCandleAttenuation();
+        lightingShader->useProgram();
+        for(ornament& o : ornamentList){
+            updateOrnamentCoordinate(o);
+            //cout << "Ornament x: " << o.ornamentX << " Ornament y: " << o.ornamentY << " Ornament z: " << o.ornamentZ << endl << endl;
+        }
 
         // the following code is a hack for OSX Mojave
         // the window is initially black until it is moved
